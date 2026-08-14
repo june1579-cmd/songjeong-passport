@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Megaphone, Pin } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
-import { Program, Session, Registration, Attendance, Participant, Announcement, PROGRAM_CATEGORIES } from "@/lib/types";
+import { Program, Session, Registration, Attendance, Participant, Announcement, Photo, PROGRAM_CATEGORIES } from "@/lib/types";
 import { computeCardStatus, nextUpcomingSession } from "@/lib/program-status";
 import ProgramCard from "@/components/ProgramCard";
 import BottomNav from "@/components/BottomNav";
 import PassportSummaryCard from "@/components/PassportSummaryCard";
 import NextActivityCard from "@/components/NextActivityCard";
+import PhotoSlideshow from "@/components/PhotoSlideshow";
+import AnnouncementModal from "@/components/AnnouncementModal";
 
 function dateLabelFor(sessions: Session[], programId: string) {
   const list = sessions.filter((s) => s.program_id === programId).map((s) => s.session_date).sort();
@@ -27,6 +29,8 @@ export default function HomePage() {
   const [myRegs, setMyRegs] = useState<Registration[]>([]);
   const [myAttendance, setMyAttendance] = useState<Attendance[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [slidePhotos, setSlidePhotos] = useState<Photo[]>([]);
+  const [openAnnouncement, setOpenAnnouncement] = useState<Announcement | null>(null);
   const [filter, setFilter] = useState("전체");
 
   useEffect(() => {
@@ -46,6 +50,10 @@ export default function HomePage() {
         .limit(5);
       setAnnouncements(ann ?? []);
 
+      // 진행 중인 프로그램들의 사진을 모아 슬라이드로 (최신순 최대 8장)
+      const { data: photos } = await supabase.from("photos").select("*").not("program_id", "is", null).order("created_at", { ascending: false }).limit(8);
+      setSlidePhotos(photos ?? []);
+
       const pid = getStoredParticipantId();
       if (pid) {
         const { data: participant } = await supabase.from("participants").select("*").eq("id", pid).single();
@@ -59,6 +67,12 @@ export default function HomePage() {
       }
     })();
   }, []);
+
+  const programMap = useMemo(() => {
+    const map: Record<string, Program> = {};
+    (programs ?? []).forEach((p) => (map[p.id] = p));
+    return map;
+  }, [programs]);
 
   const filteredPrograms = useMemo(() => {
     if (!programs) return [];
@@ -126,6 +140,13 @@ export default function HomePage() {
         ) : null}
       </div>
 
+      {slidePhotos.length > 0 && (
+        <div className="px-4 mt-5">
+          <p className="text-sm font-medium px-1 mb-2 text-muted">진행되는 프로그램 현장</p>
+          <PhotoSlideshow photos={slidePhotos} programMap={programMap} />
+        </div>
+      )}
+
       {announcements.length > 0 && (
         <div className="px-4 mt-5">
           <div className="flex items-center gap-1.5 mb-2 px-1">
@@ -134,13 +155,13 @@ export default function HomePage() {
           </div>
           <div className="space-y-2">
             {announcements.map((a) => (
-              <div key={a.id} className="rounded-xl border border-line bg-white p-3">
+              <button key={a.id} onClick={() => setOpenAnnouncement(a)} className="w-full text-left rounded-xl border border-line bg-white p-3">
                 <div className="flex items-center gap-1.5">
                   {a.pinned && <Pin size={11} className="text-coral" />}
                   <span className="text-sm font-medium text-ink">{a.title}</span>
                 </div>
                 <p className="text-xs text-muted mt-1 leading-relaxed line-clamp-2">{a.content}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -189,6 +210,8 @@ export default function HomePage() {
       <div className="px-4 mt-8 text-center">
         <a href="/admin/login" className="text-[11px] text-muted/70">운영자 로그인</a>
       </div>
+
+      {openAnnouncement && <AnnouncementModal announcement={openAnnouncement} onClose={() => setOpenAnnouncement(null)} />}
 
       <BottomNav />
     </div>

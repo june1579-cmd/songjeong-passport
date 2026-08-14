@@ -53,6 +53,17 @@ export interface Participant {
   age_group: string;
   residence_area: string;
   privacy_consent_at: string | null;
+  is_archived: boolean;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  participant_id: string;
+  program_id: string | null;
+  channel: string;
+  message: string;
+  status: string;
   created_at: string;
 }
 

@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, Users, CreditCard, QrCode, CheckCircle2, Megaphone, Images, Pin, ListChecks, Star, MessageSquarePlus } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, CreditCard, QrCode, CheckCircle2, Images, ListChecks, Star, MessageSquarePlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
-import { Program, Session, Participant, Registration, Attendance, Announcement, Photo, Review, APPLICATION_STATUS_LABEL } from "@/lib/types";
+import { Program, Session, Participant, Registration, Attendance, Photo, Review, APPLICATION_STATUS_LABEL } from "@/lib/types";
 import { computeCardStatus, remainingSpots } from "@/lib/program-status";
 import TopBar from "@/components/TopBar";
 import Pill from "@/components/Pill";
@@ -32,7 +32,6 @@ export default function ProgramDetailPage() {
   const [me, setMe] = useState<Participant | null>(null);
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [totalRegCount, setTotalRegCount] = useState(0);
@@ -52,14 +51,6 @@ export default function ProgramDetailPage() {
 
     const { data: regs } = await supabase.from("registrations").select("status").eq("program_id", id);
     setTotalRegCount((regs ?? []).filter((r) => r.status !== "cancelled" && r.status !== "rejected").length);
-
-    const { data: ann } = await supabase
-      .from("announcements")
-      .select("*")
-      .or(`program_id.eq.${id},program_id.is.null`)
-      .order("pinned", { ascending: false })
-      .order("created_at", { ascending: false });
-    setAnnouncements(ann ?? []);
 
     const { data: ph } = await supabase
       .from("photos")
@@ -163,26 +154,6 @@ export default function ProgramDetailPage() {
             <div className="rounded-xl border border-line bg-white p-4 space-y-2 text-sm">
               {program.prep && <p className="text-ink"><span className="text-muted">준비물 · </span>{program.prep}</p>}
               {program.requirement && <p className="text-ink"><span className="text-muted">유의사항 · </span>{program.requirement}</p>}
-            </div>
-          </div>
-        )}
-
-        {announcements.length > 0 && (
-          <div>
-            <div className="flex items-center gap-1.5 mb-2 px-1">
-              <Megaphone size={14} className="text-navy" />
-              <span className="text-sm font-medium text-navy">공지사항</span>
-            </div>
-            <div className="space-y-2">
-              {announcements.map((a) => (
-                <div key={a.id} className="rounded-xl border border-line bg-white p-3">
-                  <div className="flex items-center gap-1.5">
-                    {a.pinned && <Pin size={11} className="text-coral" />}
-                    <span className="text-sm font-medium text-ink">{a.title}</span>
-                  </div>
-                  <p className="text-xs text-muted mt-1 leading-relaxed">{a.content}</p>
-                </div>
-              ))}
             </div>
           </div>
         )}

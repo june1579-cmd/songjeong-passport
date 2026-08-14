@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 const NAV = [
   { href: "/admin", label: "대시보드" },
   { href: "/admin/programs", label: "프로그램 관리" },
+  { href: "/admin/participants", label: "참여자 관리" },
   { href: "/admin/announcements", label: "공지사항" },
   { href: "/admin/photos", label: "사진 갤러리" },
 ];

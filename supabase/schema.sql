@@ -264,3 +264,30 @@ drop policy if exists "public read reviews" on reviews;
 create policy "public read reviews" on reviews for select using (true);
 drop policy if exists "anon insert reviews" on reviews;
 create policy "anon insert reviews" on reviews for insert with check (true);
+
+-- =================================================================
+-- 확장 5: 참여자 보관/삭제 관리, 대기자 자동 승격 알림 로그
+-- =================================================================
+alter table participants add column if not exists is_archived boolean not null default false;
+
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  participant_id uuid not null references participants(id) on delete cascade,
+  program_id text references programs(id) on delete cascade,
+  channel text not null default 'kakao',
+  message text not null,
+  status text not null default 'pending', -- pending | sent | failed (실제 발송 연동 전까지는 pending으로 기록만 됨)
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_notifications_participant on notifications(participant_id);
+
+alter table notifications enable row level security;
+drop policy if exists "admin read notifications" on notifications;
+create policy "admin read notifications" on notifications for select using (true);
+drop policy if exists "admin insert notifications" on notifications;
+create policy "admin insert notifications" on notifications for insert with check (true);
+
+drop policy if exists "admin delete participants" on participants;
+create policy "admin delete participants" on participants for delete using (true);
+drop policy if exists "admin update participants" on participants;
+create policy "admin update participants" on participants for update using (true);

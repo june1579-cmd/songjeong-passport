@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { Download, Check } from "lucide-react";
+import { Download, Check, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Program, Registration, Participant, Attendance, ApplicationStatus, APPLICATION_STATUS_LABEL } from "@/lib/types";
+import { Program, Registration, Participant, Attendance, ApplicationStatus, APPLICATION_STATUS_LABEL, Notification } from "@/lib/types";
+import { promoteNextWaitlisted } from "@/lib/waitlist";
 import Pill from "@/components/Pill";
 
 interface Row {
@@ -26,6 +27,14 @@ export default function ApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | ApplicationStatus>("all");
+  const [notifications, setNotifications] = useState<(Notification & { participant_name: string })[]>([]);
+
+  const loadNotifications = async () => {
+    const { data: notifs } = await supabase.from("notifications").select("*").eq("program_id", id).order("created_at", { ascending: false }).limit(10);
+    if (!notifs?.length) { setNotifications([]); return; }
+    const { data: participants } = await supabase.from("participants").select("id,name").in("id", notifs.map((n) => n.participant_id));
+    setNotifications(notifs.map((n) => ({ ...n, participant_name: participants?.find((p) => p.id === n.participant_id)?.name ?? "" })));
+  };
 
   const load = async () => {
     const { data: prog } = await supabase.from("programs").select("*").eq("id", id).single();
@@ -54,7 +63,7 @@ export default function ApplicationsPage() {
     setRows(list);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { load(); loadNotifications(); /* eslint-disable-next-line */ }, [id]);
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.registration.status === filter);
 
@@ -70,9 +79,20 @@ export default function ApplicationsPage() {
 
   const bulkUpdate = async (status: ApplicationStatus) => {
     if (!selectedIds.size) return;
+    // 취소/미선정으로 바뀌는 대상 중 원래 '선정' 상태였던 사람 → 자리가 비므로 대기자 승격 대상
+    const freed = (status === "cancelled" || status === "rejected")
+      ? rows.filter((r) => selectedIds.has(r.registration.id) && r.registration.status === "selected")
+      : [];
+
     await supabase.from("registrations").update({ status }).in("id", [...selectedIds]);
+
+    for (const r of freed) {
+      await promoteNextWaitlisted(r.registration.program_id, status);
+    }
+
     setSelectedIds(new Set());
     load();
+    loadNotifications();
   };
 
   const counts = {
@@ -169,6 +189,29 @@ export default function ApplicationsPage() {
         </table>
         {filtered.length === 0 && <p className="text-xs text-muted p-4">해당하는 신청자가 없습니다.</p>}
       </div>
+
+      {notifications.length > 0 && (
+        <div className="mt-5">
+          <div className="flex items-center gap-1.5 mb-2 px-1">
+            <Bell size={14} className="text-navy" />
+            <span className="text-sm font-medium text-navy">알림 발송 기록</span>
+          </div>
+          <div className="rounded-xl border border-line bg-white divide-y divide-line">
+            {notifications.map((n) => (
+              <div key={n.id} className="p-3 text-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-ink">{n.participant_name}</span>
+                  <Pill tone={n.status === "sent" ? "seafoam" : "sand"}>{n.status === "sent" ? "발송됨" : "발송 대기(연동 전)"}</Pill>
+                </div>
+                <p className="text-muted">{n.message}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted px-1 mt-1.5">
+            카카오 알림톡 API 연동 전이라 실제 발송은 안 되고 기록만 남습니다. src/lib/waitlist.ts에서 연동할 수 있어요.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
