@@ -7,6 +7,8 @@ import { getStoredParticipantId, setStoredParticipantId } from "@/lib/participan
 import { Participant, Attendance, Program, Session, Registration } from "@/lib/types";
 import StampBadge from "@/components/StampBadge";
 import BottomNav from "@/components/BottomNav";
+import JourneyCalendar, { CalendarEntry } from "@/components/JourneyCalendar";
+import AmbientWaveSound from "@/components/AmbientWaveSound";
 
 const MONTHLY_GOAL = 3;
 
@@ -91,8 +93,9 @@ export default function PassportPage() {
           />
           {error && <p className="text-xs text-coralDark">{error}</p>}
           <button onClick={login} className="w-full py-3 rounded-xl font-display text-white text-sm bg-navy">확인하기</button>
+          <Link href="/signup" className="block text-center text-xs text-coral pt-1">아직 계정이 없으신가요? 회원가입</Link>
         </div>
-        <BottomNav />
+      <BottomNav />
       </div>
     );
   }
@@ -109,6 +112,21 @@ export default function PassportPage() {
   const upcoming = sessions
     .filter((s) => myProgramIds.has(s.program_id) && s.session_date >= today && !attendedSessionIds.has(s.id))
     .sort((a, b) => a.session_date.localeCompare(b.session_date));
+
+  const calendarEntries: CalendarEntry[] = [
+    ...attendance.map((a) => ({
+      date: a.checked_in_at.slice(0, 10),
+      emoji: programMap[a.program_id]?.emoji ?? "🌊",
+      title: programMap[a.program_id]?.title ?? "",
+      done: true,
+    })),
+    ...upcoming.map((s) => ({
+      date: s.session_date,
+      emoji: programMap[s.program_id]?.emoji ?? "🌊",
+      title: programMap[s.program_id]?.title ?? "",
+      done: false,
+    })),
+  ];
 
   return (
     <div className="pb-24 min-h-screen">
@@ -165,6 +183,11 @@ export default function PassportPage() {
           </div>
         )}
 
+        <div className="mb-5">
+          <p className="text-sm font-medium px-1 mb-2 text-muted">나의 송정여정 (날짜별 보기)</p>
+          <JourneyCalendar entries={calendarEntries} />
+        </div>
+
         <p className="text-sm font-medium px-1 mb-2 text-muted">활동 타임라인</p>
         <div className="space-y-2">
           {attendance.length === 0 && upcoming.length === 0 && (
@@ -198,6 +221,7 @@ export default function PassportPage() {
           })}
         </div>
       </div>
+      <AmbientWaveSound />
       <BottomNav />
     </div>
   );

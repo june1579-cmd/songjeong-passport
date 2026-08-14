@@ -11,6 +11,7 @@ import PassportSummaryCard from "@/components/PassportSummaryCard";
 import NextActivityCard from "@/components/NextActivityCard";
 import PhotoSlideshow from "@/components/PhotoSlideshow";
 import AnnouncementModal from "@/components/AnnouncementModal";
+import AmbientWaveSound from "@/components/AmbientWaveSound";
 
 function dateLabelFor(sessions: Session[], programId: string) {
   const list = sessions.filter((s) => s.program_id === programId).map((s) => s.session_date).sort();
@@ -155,12 +156,12 @@ export default function HomePage() {
           </div>
           <div className="space-y-2">
             {announcements.map((a) => (
-              <button key={a.id} onClick={() => setOpenAnnouncement(a)} className="w-full text-left rounded-xl border border-line bg-white p-3">
+              <button key={a.id} onClick={() => setOpenAnnouncement(a)} className="w-full text-left rounded-xl border border-line bg-white p-3 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   {a.pinned && <Pin size={11} className="text-coral" />}
                   <span className="text-sm font-medium text-ink">{a.title}</span>
                 </div>
-                <p className="text-xs text-muted mt-1 leading-relaxed line-clamp-2">{a.content}</p>
+                <span className="text-[11px] text-muted flex-shrink-0">자세히 &gt;</span>
               </button>
             ))}
           </div>
@@ -213,6 +214,7 @@ export default function HomePage() {
 
       {openAnnouncement && <AnnouncementModal announcement={openAnnouncement} onClose={() => setOpenAnnouncement(null)} />}
 
+      <AmbientWaveSound />
       <BottomNav />
     </div>
   );

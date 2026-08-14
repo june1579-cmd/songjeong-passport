@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Star, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Participant } from "@/lib/types";
@@ -20,13 +20,32 @@ export default function ReviewModal({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [hasMediaConsent, setHasMediaConsent] = useState<boolean | null>(null);
+  const [agreeMediaNow, setAgreeMediaNow] = useState(false);
 
-  const canSubmit = rating > 0 && (content.trim() || file);
+  useEffect(() => {
+    supabase
+      .from("consents")
+      .select("agreed")
+      .eq("participant_id", me.id)
+      .eq("consent_type", "media_optional")
+      .order("agreed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setHasMediaConsent(data?.agreed ?? false));
+  }, [me.id]);
+
+  const needsMediaConsent = !!file && hasMediaConsent === false;
+  const canSubmit = rating > 0 && (content.trim() || file) && (!needsMediaConsent || agreeMediaNow);
 
   const submit = async () => {
     if (!canSubmit) return;
     setSaving(true);
     setError("");
+
+    if (needsMediaConsent && agreeMediaNow) {
+      await supabase.from("consents").insert({ participant_id: me.id, consent_type: "media_optional", agreed: true });
+    }
 
     let imageUrl: string | null = null;
     if (file) {
@@ -91,12 +110,19 @@ export default function ReviewModal({
           />
         </div>
 
-        <div className="mb-4">
+        <div className="mb-2">
           <label className="flex items-center gap-2 text-xs font-medium text-muted mb-1.5 cursor-pointer">
             <Camera size={14} /> 사진 첨부 (선택)
           </label>
           <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="w-full text-xs" />
         </div>
+
+        {needsMediaConsent && (
+          <label className="flex items-start gap-2 text-xs text-ink mb-4 mt-2 p-3 rounded-lg bg-sand">
+            <input type="checkbox" checked={agreeMediaNow} onChange={(e) => setAgreeMediaNow(e.target.checked)} className="mt-0.5" />
+            <span>사진을 프로그램 갤러리에 게시하고, 홍보 목적으로 활용하는 것에 동의합니다. (동의해야 사진을 올릴 수 있어요)</span>
+          </label>
+        )}
 
         {error && <p className="text-xs text-coralDark mb-2">{error}</p>}
 
