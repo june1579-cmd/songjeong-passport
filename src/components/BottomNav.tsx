@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Stamp } from "lucide-react";
+import { Home, Stamp, QrCode } from "lucide-react";
 
 // 주민용 하단 네비게이션 — 관리자 메뉴는 여기 섞지 않는다(관리자는 /admin/login으로 별도 접근).
 const items = [
   { href: "/", label: "홈", icon: Home },
+  { href: "/scan", label: "체크인", icon: QrCode },
   { href: "/passport", label: "패스포트", icon: Stamp },
 ];
 

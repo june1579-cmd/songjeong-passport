@@ -113,19 +113,34 @@ export default function PassportPage() {
     .filter((s) => myProgramIds.has(s.program_id) && s.session_date >= today && !attendedSessionIds.has(s.id))
     .sort((a, b) => a.session_date.localeCompare(b.session_date));
 
+  const sessionById = useMemo(() => {
+    const map: Record<string, Session> = {};
+    sessions.forEach((s) => (map[s.id] = s));
+    return map;
+  }, [sessions]);
+
   const calendarEntries: CalendarEntry[] = [
-    ...attendance.map((a) => ({
-      date: a.checked_in_at.slice(0, 10),
-      emoji: programMap[a.program_id]?.emoji ?? "🌊",
-      title: programMap[a.program_id]?.title ?? "",
-      done: true,
-    })),
-    ...upcoming.map((s) => ({
-      date: s.session_date,
-      emoji: programMap[s.program_id]?.emoji ?? "🌊",
-      title: programMap[s.program_id]?.title ?? "",
-      done: false,
-    })),
+    ...attendance.map((a) => {
+      const s = sessionById[a.session_id];
+      const prog = programMap[a.program_id];
+      return {
+        date: a.checked_in_at.slice(0, 10),
+        time: s?.start_time?.slice(0, 5),
+        emoji: prog?.emoji ?? "🌊",
+        title: `${prog?.title ?? ""}${s ? ` (${s.session_label})` : ""}`,
+        done: true,
+      };
+    }),
+    ...upcoming.map((s) => {
+      const prog = programMap[s.program_id];
+      return {
+        date: s.session_date,
+        time: s.start_time?.slice(0, 5),
+        emoji: prog?.emoji ?? "🌊",
+        title: `${prog?.title ?? ""} (${s.session_label})`,
+        done: false,
+      };
+    }),
   ];
 
   return (

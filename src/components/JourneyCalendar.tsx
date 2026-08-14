@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface CalendarEntry {
   date: string; // YYYY-MM-DD
+  time?: string; // HH:MM (선택)
   emoji: string;
   title: string;
   done: boolean; // true=완료, false=예정
@@ -24,6 +25,7 @@ export default function JourneyCalendar({ entries }: { entries: CalendarEntry[] 
       map[e.date] = map[e.date] ?? [];
       map[e.date].push(e);
     });
+    Object.values(map).forEach((list) => list.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? "")));
     return map;
   }, [entries]);
 
@@ -95,7 +97,7 @@ export default function JourneyCalendar({ entries }: { entries: CalendarEntry[] 
           {selectedEntries.map((e, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <span>{e.emoji}</span>
-              <span className="text-ink flex-1">{e.title}</span>
+              <span className="text-ink flex-1">{e.title}{e.time ? ` · ${e.time}` : ""}</span>
               <span className={`text-[11px] ${e.done ? "text-seafoam" : "text-coral"}`}>{e.done ? "참여완료" : "예정"}</span>
             </div>
           ))}

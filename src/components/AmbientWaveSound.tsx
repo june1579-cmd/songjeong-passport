@@ -13,6 +13,7 @@ export default function AmbientWaveSound() {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     const ctx = new AudioCtx();
     ctxRef.current = ctx;
+    if (ctx.state === "suspended") ctx.resume();
 
     // 화이트노이즈 버퍼 생성 (2초 루프)
     const bufferSize = ctx.sampleRate * 2;
@@ -26,26 +27,26 @@ export default function AmbientWaveSound() {
 
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = 700;
+    filter.frequency.value = 1000;
 
-    const gain = ctx.createGain();
-    gain.gain.value = 0.05;
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 0.35;
 
-    // LFO로 파도가 밀려왔다 빠지는 느낌의 볼륨 변조
+    // LFO로 파도가 밀려왔다 빠지는 느낌의 볼륨 변조 (0.15 ~ 0.55 사이를 오가도록)
     const lfo = ctx.createOscillator();
     lfo.frequency.value = 0.12;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.045;
+    lfoGain.gain.value = 0.2;
     lfo.connect(lfoGain);
-    lfoGain.connect(gain.gain);
+    lfoGain.connect(masterGain.gain);
 
     source.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
+    filter.connect(masterGain);
+    masterGain.connect(ctx.destination);
 
     source.start();
     lfo.start();
-    nodesRef.current = { source, gain, lfo };
+    nodesRef.current = { source, gain: masterGain, lfo };
     setPlaying(true);
   };
 

@@ -103,9 +103,10 @@ export default function ApplicationsPage() {
   };
 
   const downloadCsv = () => {
-    const header = ["이름", "연령대", "거주지역", "유입경로", "신청일", "기존참여횟수", "상태"];
+    const header = ["이름", "전화번호", "연령대", "거주지역", "유입경로", "신청일", "기존참여횟수", "상태"];
     const lines = rows.map((r) => [
       r.participant.name,
+      r.participant.phone_number ?? `****-****-${r.participant.phone4}`,
       r.participant.age_group,
       r.participant.residence_area,
       r.registration.acquisition_channel,
@@ -118,6 +119,37 @@ export default function ApplicationsPage() {
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `${program?.id ?? "program"}_신청자.csv`;
+    link.click();
+  };
+
+  const downloadAttendanceCsv = async () => {
+    const { data: attendance } = await supabase
+      .from("attendance")
+      .select("participant_id, session_id, checked_in_at")
+      .eq("program_id", id);
+    if (!attendance?.length) { window.alert("출석 기록이 없습니다."); return; }
+
+    const { data: sessions } = await supabase.from("sessions").select("id, session_label, session_date").eq("program_id", id);
+    const sessionMap: Record<string, { session_label: string; session_date: string }> = {};
+    (sessions ?? []).forEach((s) => (sessionMap[s.id] = s));
+
+    const header = ["이름", "전화번호", "회차", "회차일자", "체크인 시각"];
+    const lines = attendance.map((a) => {
+      const p = rows.find((r) => r.participant.id === a.participant_id)?.participant;
+      const s = sessionMap[a.session_id];
+      return [
+        p?.name ?? "",
+        p?.phone_number ?? (p ? `****-****-${p.phone4}` : ""),
+        s?.session_label ?? "",
+        s?.session_date ?? "",
+        new Date(a.checked_in_at).toLocaleString("ko-KR"),
+      ];
+    });
+    const csv = [header, ...lines].map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${program?.id ?? "program"}_출석기록.csv`;
     link.click();
   };
 
@@ -156,7 +188,10 @@ export default function ApplicationsPage() {
           취소 처리
         </button>
         <button onClick={downloadCsv} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg border border-line text-navy ml-auto">
-          <Download size={13} /> CSV 다운로드
+          <Download size={13} /> 신청자 CSV
+        </button>
+        <button onClick={downloadAttendanceCsv} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg border border-line text-navy">
+          <Download size={13} /> 출석기록 CSV
         </button>
       </div>
 
@@ -166,6 +201,7 @@ export default function ApplicationsPage() {
             <tr className="bg-sand text-navy">
               <th className="p-2"><input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filtered.length} onChange={toggleAll} /></th>
               <th className="text-left p-2 font-medium">이름</th>
+              <th className="text-left p-2 font-medium">전화번호</th>
               <th className="text-left p-2 font-medium">연령대</th>
               <th className="text-left p-2 font-medium">거주지역</th>
               <th className="text-left p-2 font-medium">유입경로</th>
@@ -178,6 +214,7 @@ export default function ApplicationsPage() {
               <tr key={r.registration.id} className="border-t border-line">
                 <td className="p-2"><input type="checkbox" checked={selectedIds.has(r.registration.id)} onChange={() => toggleOne(r.registration.id)} /></td>
                 <td className="p-2">{r.participant.name}</td>
+                <td className="p-2">{r.participant.phone_number ?? `****-****-${r.participant.phone4}`}</td>
                 <td className="p-2">{r.participant.age_group}</td>
                 <td className="p-2">{r.participant.residence_area}</td>
                 <td className="p-2">{r.registration.acquisition_channel}</td>
