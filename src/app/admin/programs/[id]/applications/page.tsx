@@ -208,7 +208,7 @@ export default function ApplicationsPage() {
             ))}
           </div>
           <p className="text-[11px] text-muted px-1 mt-1.5">
-            카카오 알림톡 API 연동 전이라 실제 발송은 안 되고 기록만 남습니다. src/lib/waitlist.ts에서 연동할 수 있어요.
+            SMS 대행사 연동 전이라 실제 발송은 안 되고 기록만 남습니다. src/lib/waitlist.ts에서 연동할 수 있어요.
           </p>
         </div>
       )}

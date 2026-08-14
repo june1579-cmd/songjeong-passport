@@ -274,7 +274,7 @@ create table if not exists notifications (
   id uuid primary key default gen_random_uuid(),
   participant_id uuid not null references participants(id) on delete cascade,
   program_id text references programs(id) on delete cascade,
-  channel text not null default 'kakao',
+  channel text not null default 'sms',
   message text not null,
   status text not null default 'pending', -- pending | sent | failed (실제 발송 연동 전까지는 pending으로 기록만 됨)
   created_at timestamptz not null default now()
