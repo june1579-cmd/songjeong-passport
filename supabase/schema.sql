@@ -388,3 +388,12 @@ update programs set session_selection_mode = 'fixed', max_selectable_sessions = 
 -- =================================================================
 alter table programs add column if not exists instructor_bio text;
 alter table programs add column if not exists instructor_photo_url text;
+
+-- =================================================================
+-- 확장 10: 프로그램 삭제가 막히던 문제 수정
+-- =================================================================
+-- 1) "다음 추천 프로그램"으로 다른 프로그램이 가리키고 있으면 삭제가 막혔던 문제 —
+--    삭제 시 그 연결만 자동으로 풀리도록(null) 변경.
+alter table programs drop constraint if exists programs_next_program_id_fkey;
+alter table programs add constraint programs_next_program_id_fkey
+  foreign key (next_program_id) references programs(id) on delete set null;

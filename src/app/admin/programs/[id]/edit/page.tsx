@@ -91,8 +91,17 @@ export default function EditProgramPage() {
 
   const deleteProgram = async () => {
     if (!window.confirm(`"${form.title}" 프로그램을 삭제할까요? 관련 신청/출석 기록도 함께 삭제됩니다.`)) return;
-    await supabase.from("programs").delete().eq("id", id);
-    router.push("/admin/programs");
+    try {
+      const res = await fetch(`/api/admin/programs/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "삭제 중 문제가 발생했습니다.");
+        return;
+      }
+      router.push("/admin/programs");
+    } catch {
+      setError("삭제 중 문제가 발생했습니다.");
+    }
   };
 
   return (
