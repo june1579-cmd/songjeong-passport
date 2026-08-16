@@ -13,8 +13,18 @@ export default function CheckinPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [program, setProgram] = useState<Program | null>(null);
   const [participantId, setParticipantId] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "already" | "done" | "notfound" | "needsjoin" | "full" | "notselected">("idle");
+  const [status, setStatus] = useState<"idle" | "already" | "done" | "notfound" | "needsjoin" | "full" | "notselected" | "toosoon" | "expired">("idle");
   const [stampCount, setStampCount] = useState(0);
+
+  // 체크인 허용 시간: 회차 시작 30분 전 ~ 종료 90분 후. QR을 미리 찍어두고
+  // 실제 참여 없이 아무 때나 체크인해 스탬프만 얻는 것을 막기 위함.
+  const getWindow = (sessionDate: string, startTime: string | null, endTime: string | null) => {
+    const start = new Date(`${sessionDate}T${startTime ?? "10:00:00"}`);
+    const end = new Date(`${sessionDate}T${endTime ?? "12:00:00"}`);
+    const windowStart = new Date(start.getTime() - 30 * 60 * 1000);
+    const windowEnd = new Date(end.getTime() + 90 * 60 * 1000);
+    return { windowStart, windowEnd };
+  };
 
   useEffect(() => {
     (async () => {
@@ -53,6 +63,13 @@ export default function CheckinPage() {
         .maybeSingle();
       if (existing) setStatus("already");
 
+      if (!existing) {
+        const { windowStart, windowEnd } = getWindow(sess.session_date, sess.start_time, sess.end_time);
+        const now = new Date();
+        if (now < windowStart) { setStatus("toosoon"); return; }
+        if (now > windowEnd) { setStatus("expired"); return; }
+      }
+
       if (!existing && sess.capacity !== null) {
         const { count: sessionCount } = await supabase
           .from("attendance")
@@ -68,6 +85,10 @@ export default function CheckinPage() {
 
   const confirm = async () => {
     if (!session || !program || !participantId) return;
+    const { windowStart, windowEnd } = getWindow(session.session_date, session.start_time, session.end_time);
+    const now = new Date();
+    if (now < windowStart) { setStatus("toosoon"); return; }
+    if (now > windowEnd) { setStatus("expired"); return; }
     const { error } = await supabase.from("attendance").insert({
       participant_id: participantId,
       program_id: program.id,
@@ -125,6 +146,36 @@ export default function CheckinPage() {
         <p className="text-xs text-white/60 mb-6">다른 회차를 확인해주세요.</p>
         <button onClick={() => router.push(`/programs/${program?.id}`)} className="px-5 py-3 rounded-xl font-display bg-coral">
           다른 회차 보기
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "toosoon" && session && program) {
+    const { windowStart } = getWindow(session.session_date, session.start_time, session.end_time);
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-navy text-white">
+        <p className="text-sm text-white/80 mb-2">{program.emoji} {program.title}</p>
+        <h2 className="font-display text-lg mb-2">아직 체크인할 수 있는 시간이 아니에요</h2>
+        <p className="text-xs text-white/60 mb-2">{session.session_label} · {session.session_date} {session.start_time?.slice(0, 5)}</p>
+        <p className="text-xs text-white/60 mb-6">
+          {windowStart.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}부터 체크인할 수 있어요. 현장에서 시작 시간에 맞춰 다시 스캔해주세요.
+        </p>
+        <button onClick={() => router.push(`/programs/${program.id}`)} className="px-5 py-3 rounded-xl font-display bg-coral">
+          프로그램으로 돌아가기
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "expired" && program && session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-navy text-white">
+        <p className="text-sm text-white/80 mb-2">{program.emoji} {program.title}</p>
+        <h2 className="font-display text-lg mb-2">체크인 가능 시간이 지났어요</h2>
+        <p className="text-xs text-white/60 mb-6">{session.session_label} 회차는 종료되었습니다. 출석에 문제가 있다면 운영자에게 문의해주세요.</p>
+        <button onClick={() => router.push(`/programs/${program.id}`)} className="px-5 py-3 rounded-xl font-display bg-coral">
+          프로그램으로 돌아가기
         </button>
       </div>
     );
