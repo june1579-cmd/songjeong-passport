@@ -74,6 +74,12 @@ export default function PassportPage() {
     return chain;
   }, [programs, registrations, programMap]);
 
+  const sessionById = useMemo(() => {
+    const map: Record<string, Session> = {};
+    sessions.forEach((s) => (map[s.id] = s));
+    return map;
+  }, [sessions]);
+
   if (me === undefined) return null;
 
   if (!me) {
@@ -114,12 +120,6 @@ export default function PassportPage() {
   const upcoming = sessions
     .filter((s) => myProgramIds.has(s.program_id) && s.session_date >= today && !attendedSessionIds.has(s.id))
     .sort((a, b) => a.session_date.localeCompare(b.session_date));
-
-  const sessionById = useMemo(() => {
-    const map: Record<string, Session> = {};
-    sessions.forEach((s) => (map[s.id] = s));
-    return map;
-  }, [sessions]);
 
   const calendarEntries: CalendarEntry[] = [
     ...attendance.map((a) => {
