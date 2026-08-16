@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "송정 패스포트",
-  description: "송정에서 배우고, 경험하고, 기록하세요.",
+  title: "Experience Passport",
+  description: "One passport, every experience. 지역과 프로그램을 넘어, 하나로 이어지는 나의 경험.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

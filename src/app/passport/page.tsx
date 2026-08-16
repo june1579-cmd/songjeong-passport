@@ -5,6 +5,7 @@ import { Stamp, Check, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId, setStoredParticipantId } from "@/lib/participant-session";
 import { Participant, Attendance, Program, Session, Registration } from "@/lib/types";
+import { categoryColor } from "@/lib/category-colors";
 import StampBadge from "@/components/StampBadge";
 import BottomNav from "@/components/BottomNav";
 import JourneyCalendar, { CalendarEntry } from "@/components/JourneyCalendar";
@@ -145,8 +146,8 @@ export default function PassportPage() {
 
   return (
     <div className="pb-24 min-h-screen">
-      <div className="px-5 pt-8 pb-6 text-white" style={{ background: "linear-gradient(160deg, #0D3B4E, #155067 55%, #3F9179 140%)" }}>
-        <p className="text-xs text-white/70">나의 송정 패스포트</p>
+      <div className="px-5 pt-8 pb-6 text-white" style={{ background: "linear-gradient(150deg, #0D3B4E 0%, #2E8FC0 40%, #3F9179 75%, #9C6FCB 130%)" }}>
+        <p className="text-xs text-white/70">나의 Experience Passport</p>
         <h2 className="font-display text-xl mt-1">{me.name}님</h2>
         <div className="flex gap-5 mt-4">
           <div><div className="font-display text-lg">{myPrograms.size}개</div><div className="text-[11px] text-white/70">활동 경험</div></div>
@@ -181,10 +182,11 @@ export default function PassportPage() {
                 const attended = myPrograms.has(p.id);
                 const registered = registrations.some((r) => r.program_id === p.id && r.status !== "cancelled" && r.status !== "rejected");
                 const label = attended ? "완료" : registered ? "진행중" : "다음 활동";
+                const c = categoryColor(p.category);
                 return (
                   <div key={p.id} className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0 ${attended ? "bg-seafoamLight" : "bg-sand"}`}>
-                      {attended ? <Check size={14} className="text-seafoam" /> : p.emoji}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0" style={{ background: attended ? c.bg : "#EFE3CB" }}>
+                      {attended ? <Check size={14} style={{ color: c.text }} /> : p.emoji}
                     </div>
                     <div className="flex-1">
                       <p className="text-sm text-ink">{p.title}</p>

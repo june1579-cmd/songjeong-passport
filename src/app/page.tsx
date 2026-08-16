@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
 import { Program, Session, Registration, Attendance, Participant, Announcement, Photo, PROGRAM_CATEGORIES } from "@/lib/types";
 import { computeCardStatus, nextUpcomingSession } from "@/lib/program-status";
+import { categoryColor } from "@/lib/category-colors";
 import ProgramCard from "@/components/ProgramCard";
 import BottomNav from "@/components/BottomNav";
 import PassportSummaryCard from "@/components/PassportSummaryCard";
@@ -12,6 +13,7 @@ import NextActivityCard from "@/components/NextActivityCard";
 import PhotoSlideshow from "@/components/PhotoSlideshow";
 import AnnouncementModal from "@/components/AnnouncementModal";
 import AmbientWaveSound from "@/components/AmbientWaveSound";
+import PassportMark from "@/components/PassportMark";
 
 function dateLabelFor(sessions: Session[], programId: string) {
   const list = sessions.filter((s) => s.program_id === programId).map((s) => s.session_date).sort();
@@ -120,15 +122,27 @@ export default function HomePage() {
   return (
     <div className="pb-24">
       {/* SECTION 1 — 지역 Hero */}
-      <div className="relative overflow-hidden px-5 pt-9 pb-8 text-white" style={{ background: "linear-gradient(160deg, #0D3B4E 0%, #155067 55%, #3F9179 140%)" }}>
+      <div
+        className="relative overflow-hidden px-5 pt-9 pb-8 text-white"
+        style={{ background: "linear-gradient(150deg, #0D3B4E 0%, #2E8FC0 38%, #3F9179 72%, #D98A1A 130%)" }}
+      >
+        <div className="absolute top-6 right-5 flex gap-1.5 opacity-70">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#DD5C7B" }} />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#9C6FCB" }} />
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#FBEBD2" }} />
+        </div>
         <svg className="absolute -bottom-1 left-0 w-full opacity-25" viewBox="0 0 400 40" preserveAspectRatio="none" style={{ height: 40 }}>
           <path d="M0 20 Q 25 5 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20 V40 H0 Z" fill="#FAF6EE" />
         </svg>
-        <p className="text-xs text-white/70 mb-2 tracking-wide">부산 해운대구 송정동</p>
+        <div className="flex items-center gap-1.5 mb-3">
+          <PassportMark size={22} className="text-white" />
+          <span className="font-display text-sm tracking-wide">Experience Passport</span>
+        </div>
         <h1 className="font-display text-2xl leading-tight mb-2">
-          송정에서 배우고<br />경험을 쌓아보세요
+          오늘의 경험이<br />다음으로 이어져요
         </h1>
-        <p className="text-sm text-white/80">바다와 마을에서 만나는 우리 동네 평생학습</p>
+        <p className="text-sm text-white/85">One passport, every experience.</p>
+        <p className="text-xs text-white/70 mt-1">지역과 프로그램을 넘어, 하나로 이어지는 나의 경험 · 부산 해운대구 송정동에서 시작합니다</p>
       </div>
 
       <div className="px-4 -mt-4 relative z-10 space-y-3">
@@ -171,17 +185,25 @@ export default function HomePage() {
       {/* 필터 칩 */}
       <div className="mt-5 px-4">
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-shrink-0 text-xs px-3.5 py-2 rounded-full font-medium ${
-                filter === f ? "bg-navy text-white" : "bg-white border border-line text-ink"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+          {FILTERS.map((f) => {
+            const isCategory = PROGRAM_CATEGORIES.includes(f);
+            const active = filter === f;
+            const col = isCategory ? categoryColor(f) : null;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className="flex-shrink-0 text-xs px-3.5 py-2 rounded-full font-medium border"
+                style={
+                  active
+                    ? { background: col ? col.solid : "#0D3B4E", borderColor: col ? col.solid : "#0D3B4E", color: "white" }
+                    : { background: col ? col.bg : "white", borderColor: col ? col.bg : "#E3DCC9", color: col ? col.text : "#22303B" }
+                }
+              >
+                {f}
+              </button>
+            );
+          })}
         </div>
       </div>
 

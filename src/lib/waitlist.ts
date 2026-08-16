@@ -28,7 +28,7 @@ export async function promoteNextWaitlisted(programId: string, freedRegistration
     participant_id: (nextInLine as Registration).participant_id,
     program_id: programId,
     channel: "sms",
-    message: `[송정 패스포트] ${participant?.name ?? ""}님, '${program?.title ?? ""}' 프로그램에 자리가 생겨 선정되셨습니다. 참여를 원하시면 사이트에서 확인해주세요.`,
+    message: `[Experience Passport] ${participant?.name ?? ""}님, '${program?.title ?? ""}' 프로그램에 자리가 생겨 선정되셨습니다. 참여를 원하시면 사이트에서 확인해주세요.`,
     status: "pending",
   });
 }

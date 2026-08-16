@@ -1,6 +1,7 @@
 "use client";
 import { Plus, Trash2 } from "lucide-react";
 import { COMMON_VENUES, PROGRAM_CATEGORIES } from "@/lib/types";
+import { categoryColor } from "@/lib/category-colors";
 
 export interface ProgramFormState {
   id: string;
@@ -69,18 +70,21 @@ export function ProgramBasicFields({
 
       <Field label="카테고리">
         <div className="flex flex-wrap gap-2">
-          {PROGRAM_CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => set("category", c)}
-              className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
-                form.category === c ? "bg-navy border-navy text-white" : "bg-white border-line text-ink"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+          {PROGRAM_CATEGORIES.map((c) => {
+            const col = categoryColor(c);
+            const active = form.category === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => set("category", c)}
+                className="text-xs px-3 py-1.5 rounded-full border font-medium"
+                style={active ? { background: col.solid, borderColor: col.solid, color: "white" } : { background: col.bg, borderColor: col.bg, color: col.text }}
+              >
+                {c}
+              </button>
+            );
+          })}
         </div>
       </Field>
 

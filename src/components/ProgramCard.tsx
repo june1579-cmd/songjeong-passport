@@ -2,8 +2,9 @@ import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
 import { Program } from "@/lib/types";
 import { CardStatus, remainingSpots } from "@/lib/program-status";
+import { categoryColor } from "@/lib/category-colors";
 import StatusBadge from "./StatusBadge";
-import Pill from "./Pill";
+import CategoryPill from "./CategoryPill";
 
 export default function ProgramCard({
   program,
@@ -20,6 +21,7 @@ export default function ProgramCard({
 }) {
   const remaining = remainingSpots(totalCapacity, totalRegistrations);
   const dimmed = status === "full" || status === "closed" || status === "cancelled";
+  const c = categoryColor(program.category);
 
   return (
     <Link
@@ -27,7 +29,7 @@ export default function ProgramCard({
       className={`w-full text-left rounded-2xl overflow-hidden block bg-white border border-line ${dimmed ? "opacity-70" : ""}`}
     >
       <div className="p-4 flex gap-3">
-        <div className="rounded-xl flex items-center justify-center flex-shrink-0 w-14 h-14 bg-sand text-2xl">
+        <div className="rounded-xl flex items-center justify-center flex-shrink-0 w-14 h-14 text-2xl" style={{ background: c.bg }}>
           {program.emoji}
         </div>
         <div className="flex-1 min-w-0">
@@ -41,7 +43,7 @@ export default function ProgramCard({
             <MapPin size={12} /> <span className="truncate">{program.location}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-            {program.category && <Pill tone="sand">{program.category}</Pill>}
+            <CategoryPill category={program.category} />
             <StatusBadge status={status} remaining={remaining} />
             <span className="text-xs text-muted">{program.fee}</span>
           </div>

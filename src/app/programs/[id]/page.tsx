@@ -6,9 +6,11 @@ import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
 import { Program, Session, Participant, Registration, Attendance, Photo, Review, APPLICATION_STATUS_LABEL } from "@/lib/types";
 import { computeCardStatus, remainingSpots } from "@/lib/program-status";
+import { categoryColor } from "@/lib/category-colors";
 import TopBar from "@/components/TopBar";
 import Pill from "@/components/Pill";
 import StatusBadge from "@/components/StatusBadge";
+import CategoryPill from "@/components/CategoryPill";
 import ReviewModal from "@/components/ReviewModal";
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | null }) {
@@ -101,11 +103,11 @@ export default function ProgramDetailPage() {
 
       <div
         className="p-6 text-center text-6xl relative"
-        style={{ background: "linear-gradient(135deg, #0D3B4E, #155067 55%, #3F9179 130%)" }}
+        style={{ background: `linear-gradient(135deg, #0D3B4E, ${categoryColor(program.category).solid} 65%, #3F9179 130%)` }}
       >
         {program.emoji}
         <div className="absolute top-3 left-3 flex gap-1.5">
-          {program.category && <Pill tone="sand">{program.category}</Pill>}
+          <CategoryPill category={program.category} />
           <StatusBadge status={cardStatus} remaining={remaining} />
         </div>
       </div>

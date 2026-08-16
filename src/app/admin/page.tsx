@@ -56,7 +56,7 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <div className="px-4 pt-4">
-        <h1 className="font-display text-lg text-navy">송정 평생학습 현황</h1>
+        <h1 className="font-display text-lg text-navy">Experience Passport 운영 현황</h1>
         <p className="text-xs text-muted mt-0.5">{rangeStart} – {rangeEnd}</p>
       </div>
 
