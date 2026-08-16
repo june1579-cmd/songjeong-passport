@@ -8,6 +8,8 @@ export interface CalendarEntry {
   emoji: string;
   title: string;
   done: boolean; // true=완료, false=예정
+  color?: string; // 프로그램별 고유 색 (없으면 기본 완료/예정 색 사용)
+  programTitle?: string; // 범례 표시용 (예: "송정해변 서핑체험")
 }
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -68,8 +70,9 @@ export default function JourneyCalendar({ entries }: { entries: CalendarEntry[] 
           const key = dateKey(d);
           const dayEntries = entriesByDate[key];
           const isSelected = selectedDate === key;
-          const hasDone = dayEntries?.some((e) => e.done);
-          const hasUpcoming = dayEntries?.some((e) => !e.done);
+          const dotColors = dayEntries
+            ? [...new Set(dayEntries.map((e) => e.color ?? (e.done ? "#4E9C82" : "#EC7A4E")))].slice(0, 3)
+            : [];
           return (
             <button
               key={key}
@@ -80,11 +83,11 @@ export default function JourneyCalendar({ entries }: { entries: CalendarEntry[] 
             >
               {d}
               {dayEntries && (
-                <span
-                  className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${
-                    isSelected ? "bg-white" : hasDone ? "bg-seafoam" : hasUpcoming ? "bg-coral" : ""
-                  }`}
-                />
+                <span className="absolute bottom-1 flex gap-0.5">
+                  {dotColors.map((c, i) => (
+                    <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: isSelected ? "#fff" : c }} />
+                  ))}
+                </span>
               )}
             </button>
           );
@@ -96,6 +99,7 @@ export default function JourneyCalendar({ entries }: { entries: CalendarEntry[] 
           {selectedEntries.length === 0 && <p className="text-xs text-muted">이 날은 활동 기록이 없어요.</p>}
           {selectedEntries.map((e, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.color ?? (e.done ? "#4E9C82" : "#EC7A4E") }} />
               <span>{e.emoji}</span>
               <span className="text-ink flex-1">{e.title}{e.time ? ` · ${e.time}` : ""}</span>
               <span className={`text-[11px] ${e.done ? "text-seafoam" : "text-coral"}`}>{e.done ? "참여완료" : "예정"}</span>
@@ -104,9 +108,12 @@ export default function JourneyCalendar({ entries }: { entries: CalendarEntry[] 
         </div>
       )}
 
-      <div className="flex items-center gap-3 mt-3 pt-2 border-t border-line text-[10px] text-muted">
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-seafoam inline-block" /> 완료</span>
-        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-coral inline-block" /> 예정</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 pt-2 border-t border-line text-[10px] text-muted">
+        {[...new Map(entries.filter((e) => e.color && e.programTitle).map((e) => [e.programTitle, e.color!])).entries()].map(([title, color]) => (
+          <span key={title} className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: color }} /> {title}
+          </span>
+        ))}
       </div>
     </div>
   );

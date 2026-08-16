@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Stamp, Check, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId, setStoredParticipantId } from "@/lib/participant-session";
-import { Participant, Attendance, Program, Session, Registration } from "@/lib/types";
-import { categoryColor } from "@/lib/category-colors";
+import { Participant, Attendance, Program, Session, Registration, RegistrationSession } from "@/lib/types";
+import { categoryColor, programColor } from "@/lib/category-colors";
 import StampBadge from "@/components/StampBadge";
 import BottomNav from "@/components/BottomNav";
 import JourneyCalendar, { CalendarEntry } from "@/components/JourneyCalendar";
@@ -18,6 +18,7 @@ export default function PassportPage() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [regSessions, setRegSessions] = useState<RegistrationSession[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [name, setName] = useState("");
   const [phone4, setPhone4] = useState("");
@@ -33,6 +34,8 @@ export default function PassportPage() {
     setPrograms(progs ?? []);
     const { data: sess } = await supabase.from("sessions").select("*");
     setSessions(sess ?? []);
+    const { data: rs } = await supabase.from("registration_sessions").select("*").eq("participant_id", participant.id);
+    setRegSessions(rs ?? []);
   };
 
   useEffect(() => {
@@ -113,12 +116,12 @@ export default function PassportPage() {
   const visitsThisMonth = attendance.filter((a) => a.checked_in_at.slice(0, 7) === thisMonth).length;
   const progressPct = Math.min(100, Math.round((visitsThisMonth / MONTHLY_GOAL) * 100));
 
-  // 타임라인: 지난 체크인(완료) + 신청했지만 아직 안 지난 예정 회차
+  // 타임라인: 지난 체크인(완료) + 신청 시 직접 선택한, 아직 안 지난 회차(예정)
   const attendedSessionIds = new Set(attendance.map((a) => a.session_id));
-  const myProgramIds = new Set(registrations.filter((r) => r.status !== "cancelled" && r.status !== "rejected").map((r) => r.program_id));
+  const selectedSessionIds = new Set(regSessions.map((rs) => rs.session_id));
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = sessions
-    .filter((s) => myProgramIds.has(s.program_id) && s.session_date >= today && !attendedSessionIds.has(s.id))
+    .filter((s) => selectedSessionIds.has(s.id) && s.session_date >= today && !attendedSessionIds.has(s.id))
     .sort((a, b) => a.session_date.localeCompare(b.session_date));
 
   const calendarEntries: CalendarEntry[] = [
@@ -131,6 +134,8 @@ export default function PassportPage() {
         emoji: prog?.emoji ?? "🌊",
         title: `${prog?.title ?? ""}${s ? ` (${s.session_label})` : ""}`,
         done: true,
+        color: programColor(a.program_id),
+        programTitle: prog?.title,
       };
     }),
     ...upcoming.map((s) => {
@@ -141,6 +146,8 @@ export default function PassportPage() {
         emoji: prog?.emoji ?? "🌊",
         title: `${prog?.title ?? ""} (${s.session_label})`,
         done: false,
+        color: programColor(s.program_id),
+        programTitle: prog?.title,
       };
     }),
   ];

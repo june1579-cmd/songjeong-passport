@@ -17,3 +17,10 @@ export function categoryColor(category: string | null | undefined) {
 
 // 스탬프/포인트에 쓰는 순환 팔레트 (카테고리 무관하게 알록달록하게)
 export const STAMP_PALETTE = ["#2E8FC0", "#3F9179", "#9C6FCB", "#D98A1A", "#DD5C7B", "#E8834A"];
+
+// 프로그램 ID를 기준으로 팔레트에서 고정된 색을 하나 배정한다 (같은 프로그램=항상 같은 색).
+export function programColor(programId: string): string {
+  let hash = 0;
+  for (let i = 0; i < programId.length; i++) hash = (hash * 31 + programId.charCodeAt(i)) >>> 0;
+  return STAMP_PALETTE[hash % STAMP_PALETTE.length];
+}

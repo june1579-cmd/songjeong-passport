@@ -348,3 +348,24 @@ grant execute on function rpc_create_participant(text, text, text, text, text) t
 -- participants insert/update/delete는 이제 서버 전용 API(서비스 롤 키)로만 수행하므로
 -- 익명 직접 insert 정책은 제거한다(가입은 위 rpc_create_participant를 통해서만 가능).
 drop policy if exists "anon insert participants" on participants;
+
+-- =================================================================
+-- 확장 7: 신청 시 회차(스케줄) 선택 저장
+-- =================================================================
+create table if not exists registration_sessions (
+  id uuid primary key default gen_random_uuid(),
+  registration_id uuid not null references registrations(id) on delete cascade,
+  session_id uuid not null references sessions(id) on delete cascade,
+  participant_id uuid not null references participants(id) on delete cascade,
+  program_id text not null references programs(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (registration_id, session_id)
+);
+create index if not exists idx_regsessions_participant on registration_sessions(participant_id);
+create index if not exists idx_regsessions_session on registration_sessions(session_id);
+
+alter table registration_sessions enable row level security;
+drop policy if exists "anon insert registration_sessions" on registration_sessions;
+create policy "anon insert registration_sessions" on registration_sessions for insert with check (true);
+drop policy if exists "public read registration_sessions" on registration_sessions;
+create policy "public read registration_sessions" on registration_sessions for select using (true);

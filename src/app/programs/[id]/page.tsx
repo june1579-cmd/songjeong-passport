@@ -178,14 +178,14 @@ export default function ProgramDetailPage() {
           </div>
         )}
 
-        {(reviews.length > 0 || !!me) && (
+        {(reviews.length > 0 || !!registration) && (
           <div>
             <div className="flex items-center justify-between mb-2 px-1">
               <div className="flex items-center gap-1.5">
                 <Star size={14} className="text-navy" />
                 <span className="text-sm font-medium text-navy">참여자 후기 &amp; 사진</span>
               </div>
-              {me && (
+              {me && registration && (
                 <button onClick={() => setShowReviewModal(true)} className="flex items-center gap-1 text-xs font-medium text-coral">
                   <MessageSquarePlus size={13} /> 후기 남기기
                 </button>
