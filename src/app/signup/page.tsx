@@ -41,7 +41,7 @@ function SignupInner() {
     const res = await requestVerificationCode(phoneRaw);
     setSending(false);
     if ("error" in res) { setPhoneError(res.error); return; }
-    setDevCode(res.code);
+    setDevCode(res.demoMode && res.code ? res.code : "");
     setStep("code");
   };
 
@@ -157,9 +157,13 @@ function SignupInner() {
       {step === "code" && (
         <div className="p-4 space-y-4">
           <div className="flex items-center gap-1.5 text-sm font-medium text-navy"><ShieldCheck size={16} /> 인증번호 입력</div>
-          <div className="rounded-lg bg-seafoamLight text-seafoam text-xs p-3">
-            데모 환경에서는 SMS 대신 인증번호를 여기 표시합니다: <span className="font-bold">{devCode}</span>
-          </div>
+          {devCode ? (
+            <div className="rounded-lg bg-seafoamLight text-seafoam text-xs p-3">
+              데모 환경에서는 SMS 대신 인증번호를 여기 표시합니다: <span className="font-bold">{devCode}</span>
+            </div>
+          ) : (
+            <p className="text-xs text-muted">문자로 보내드린 6자리 인증번호를 입력해주세요.</p>
+          )}
           <input
             value={codeInput}
             onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))}

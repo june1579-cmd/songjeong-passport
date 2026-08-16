@@ -1,23 +1,22 @@
 import { supabase } from "./supabase";
 
-// MVP 데모용 휴대폰 인증(OTP).
-// 실제 SMS 발송 연동 전이므로 인증번호를 화면에 함께 보여준다 (프로덕션에서는 절대 노출 금지).
-// 실서비스 전환 시 이 파일만 SMS 프로바이더(NHN Cloud, Solapi 등) 연동으로 교체하면 된다.
+// 휴대폰 인증(OTP). 실제 발송은 /api/otp/request 서버 라우트에서 처리한다
+// (알리고 API Key는 서버 환경변수로만 존재 — 브라우저에 노출되지 않는다).
+// 아직 알리고 연동 정보가 없으면 자동으로 데모 모드로 동작한다(화면에 인증번호 표시).
 
-function generateCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-export async function requestVerificationCode(phoneNumber: string): Promise<{ code: string } | { error: string }> {
-  const code = generateCode();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-  const { error } = await supabase.from("phone_verifications").insert({
-    phone_number: phoneNumber,
-    code,
-    expires_at: expiresAt,
-  });
-  if (error) return { error: "인증번호 발송에 실패했습니다. 다시 시도해주세요." };
-  return { code }; // 데모 표시용. 실서비스에서는 반환하지 않고 SMS로만 전달한다.
+export async function requestVerificationCode(phoneNumber: string): Promise<{ code?: string; demoMode: boolean } | { error: string }> {
+  try {
+    const res = await fetch("/api/otp/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? "인증번호 발송에 실패했습니다." };
+    return data;
+  } catch {
+    return { error: "인증번호 발송 중 오류가 발생했습니다." };
+  }
 }
 
 export async function verifyCode(phoneNumber: string, code: string): Promise<boolean> {
