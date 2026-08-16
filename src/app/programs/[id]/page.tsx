@@ -133,6 +133,23 @@ export default function ProgramDetailPage() {
           <InfoRow icon={CreditCard} label="비용" value={program.fee} />
         </div>
 
+        {program.instructor && (
+          <div className="rounded-xl border border-line p-4 bg-white flex items-center gap-3">
+            {program.instructor_photo_url ? (
+              <img src={program.instructor_photo_url} alt={program.instructor} className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-sand flex items-center justify-center text-navy text-lg font-display flex-shrink-0">
+                {program.instructor.slice(0, 1)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted mb-0.5">담당 강사</p>
+              <p className="text-sm font-medium text-ink">{program.instructor}</p>
+              {program.instructor_bio && <p className="text-xs text-muted mt-0.5 leading-relaxed">{program.instructor_bio}</p>}
+            </div>
+          </div>
+        )}
+
         {sessions.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 mb-2 px-1">

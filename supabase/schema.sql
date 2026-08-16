@@ -382,3 +382,9 @@ alter table programs add column if not exists max_selectable_sessions int; -- nu
 
 update programs set session_selection_mode = 'select', max_selectable_sessions = 2 where id = 'surf';
 update programs set session_selection_mode = 'fixed', max_selectable_sessions = null where id = 'board-art';
+
+-- =================================================================
+-- 확장 9: 강사 프로필(사진/소개) 추가
+-- =================================================================
+alter table programs add column if not exists instructor_bio text;
+alter table programs add column if not exists instructor_photo_url text;

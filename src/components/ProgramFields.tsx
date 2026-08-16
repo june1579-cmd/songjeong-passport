@@ -1,7 +1,25 @@
 "use client";
-import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Plus, Trash2, Camera } from "lucide-react";
 import { COMMON_VENUES, PROGRAM_CATEGORIES } from "@/lib/types";
 import { categoryColor } from "@/lib/category-colors";
+import { supabase } from "@/lib/supabase";
+
+const EMOJI_PRESETS = ["🏄", "🎨", "🖼", "🌱", "🌊", "⚽", "📷", "🎭", "🤝", "🎉", "📚", "🧵"];
+
+function slugify(text: string) {
+  const ascii = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  if (ascii.length >= 3) return ascii;
+  // 한글 제목처럼 영문 슬러그를 뽑기 어려우면 랜덤 조합으로 대체 (URL에만 쓰이고 화면엔 안 보임)
+  return `program-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export interface ProgramFormState {
   id: string;
@@ -15,6 +33,8 @@ export interface ProgramFormState {
   requirement: string;
   prep: string;
   instructor: string;
+  instructorBio: string;
+  instructorPhotoUrl: string;
   capacity: number | null; // null = 이 프로그램은 기본 정원 없음
   category: string;
   nextProgramId: string;
@@ -54,20 +74,79 @@ export function ProgramBasicFields({
 }) {
   const set = (k: keyof ProgramFormState, v: string | number | null) => setForm({ ...form, [k]: v });
   const unlimited = form.capacity === null;
+  const [showIdEdit, setShowIdEdit] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const onTitleChange = (title: string) => {
+    // 아이디를 아직 직접 손대지 않았다면(새 프로그램) 제목에서 자동으로 만들어준다.
+    if (!lockId && !showIdEdit) {
+      setForm({ ...form, title, id: slugify(title) });
+    } else {
+      setForm({ ...form, title });
+    }
+  };
+
+  const uploadInstructorPhoto = async (file: File) => {
+    setUploadingPhoto(true);
+    const path = `instructors/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "")}`;
+    const { error } = await supabase.storage.from("gallery").upload(path, file);
+    if (!error) {
+      const { data: pub } = supabase.storage.from("gallery").getPublicUrl(path);
+      set("instructorPhotoUrl", pub.publicUrl);
+    }
+    setUploadingPhoto(false);
+  };
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="아이콘(이모지)">
-          <input value={form.emoji} onChange={(e) => set("emoji", e.target.value)} placeholder="🏄" className={inputCls} />
-        </Field>
-        <div className="col-span-2">
-          <Field label="프로그램 ID (slug, 영문)">
-            <input value={form.id} disabled={lockId} onChange={(e) => set("id", e.target.value.replace(/[^a-z0-9-]/g, ""))} placeholder="surf-2" className={`${inputCls} ${lockId ? "bg-sand text-muted" : ""}`} />
-          </Field>
+      <Field label="아이콘">
+        <div className="flex flex-wrap gap-2">
+          {EMOJI_PRESETS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => set("emoji", e)}
+              className={`w-10 h-10 rounded-lg border text-lg flex items-center justify-center ${
+                form.emoji === e ? "border-navy bg-sand" : "border-line bg-white"
+              }`}
+            >
+              {e}
+            </button>
+          ))}
+          <input
+            value={form.emoji}
+            onChange={(e) => set("emoji", e.target.value)}
+            placeholder="직접 입력"
+            className="w-16 h-10 border border-line rounded-lg px-2 text-center text-lg"
+          />
         </div>
-      </div>
-      <Field label="프로그램명"><input value={form.title} onChange={(e) => set("title", e.target.value)} className={inputCls} /></Field>
+      </Field>
+
+      <Field label="프로그램명">
+        <input value={form.title} onChange={(e) => onTitleChange(e.target.value)} className={inputCls} />
+      </Field>
+
+      {!lockId && (
+        <button
+          type="button"
+          onClick={() => setShowIdEdit(!showIdEdit)}
+          className="text-[11px] text-muted underline"
+        >
+          {showIdEdit ? "주소 직접 입력 그만두기" : `주소: /programs/${form.id || "..."} (직접 바꾸려면 클릭)`}
+        </button>
+      )}
+      {(showIdEdit || lockId) && (
+        <Field label="프로그램 주소(ID, 영문/숫자)">
+          <input
+            value={form.id}
+            disabled={lockId}
+            onChange={(e) => set("id", e.target.value.replace(/[^a-z0-9-]/g, ""))}
+            placeholder="surf-2"
+            className={`${inputCls} ${lockId ? "bg-sand text-muted" : ""}`}
+          />
+        </Field>
+      )}
+
       <Field label="설명"><textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} className={inputCls} /></Field>
 
       <Field label="카테고리">
@@ -172,7 +251,36 @@ export function ProgramBasicFields({
       <Field label="대상"><input value={form.target} onChange={(e) => set("target", e.target.value)} className={inputCls} /></Field>
       <Field label="참여요건"><input value={form.requirement} onChange={(e) => set("requirement", e.target.value)} className={inputCls} /></Field>
       <Field label="준비물"><input value={form.prep} onChange={(e) => set("prep", e.target.value)} className={inputCls} /></Field>
-      <Field label="강사"><input value={form.instructor} onChange={(e) => set("instructor", e.target.value)} className={inputCls} /></Field>
+      <Field label="강사 프로필">
+        <div className="rounded-lg border border-line p-3 space-y-2.5 bg-white">
+          <input value={form.instructor} onChange={(e) => set("instructor", e.target.value)} placeholder="강사명" className={inputCls} />
+          <textarea
+            value={form.instructorBio}
+            onChange={(e) => set("instructorBio", e.target.value)}
+            rows={2}
+            placeholder="간단한 소개 (경력, 자격 등)"
+            className={inputCls}
+          />
+          <div className="flex items-center gap-3">
+            {form.instructorPhotoUrl ? (
+              <img src={form.instructorPhotoUrl} alt="강사 사진" className="w-14 h-14 rounded-full object-cover border border-line" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-sand flex items-center justify-center text-muted flex-shrink-0">
+                <Camera size={18} />
+              </div>
+            )}
+            <label className="text-xs font-medium text-navy cursor-pointer">
+              {uploadingPhoto ? "업로드 중..." : form.instructorPhotoUrl ? "사진 바꾸기" : "사진 업로드"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadInstructorPhoto(e.target.files[0])}
+              />
+            </label>
+          </div>
+        </div>
+      </Field>
       <Field label="다음 추천 프로그램">
         <select value={form.nextProgramId} onChange={(e) => set("nextProgramId", e.target.value)} className={inputCls}>
           <option value="">없음</option>

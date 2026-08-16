@@ -8,6 +8,7 @@ import { ProgramBasicFields, ProgramFormState, SessionEditor, SessionDraft } fro
 const empty: ProgramFormState = {
   id: "", emoji: "🌊", title: "", description: "", location: "", address: "",
   fee: "무료", target: "", requirement: "", prep: "", instructor: "",
+  instructorBio: "", instructorPhotoUrl: "",
   capacity: null, category: "지역활동", nextProgramId: "", nextTeaser: "",
   sessionSelectionMode: "select", maxSelectableSessions: null,
 };
@@ -42,6 +43,8 @@ export default function NewProgramPage() {
       requirement: form.requirement,
       prep: form.prep,
       instructor: form.instructor,
+      instructor_bio: form.instructorBio || null,
+      instructor_photo_url: form.instructorPhotoUrl || null,
       capacity: form.capacity,
       category: form.category,
       session_selection_mode: form.sessionSelectionMode,

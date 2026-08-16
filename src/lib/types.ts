@@ -15,6 +15,8 @@ export interface Program {
   requirement: string | null;
   prep: string | null;
   instructor: string | null;
+  instructor_bio: string | null;
+  instructor_photo_url: string | null;
   emoji: string | null;
   capacity: number | null;
   waiting_capacity: number | null;
