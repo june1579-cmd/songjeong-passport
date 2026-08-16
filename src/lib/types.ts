@@ -1,3 +1,9 @@
+export type SessionSelectionMode = "select" | "fixed";
+export const SESSION_MODE_LABEL: Record<SessionSelectionMode, string> = {
+  select: "회차 자유 선택",
+  fixed: "고정 기수제 (전체 회차 함께 진행)",
+};
+
 export interface Program {
   id: string;
   title: string;
@@ -18,6 +24,8 @@ export interface Program {
   next_program_id: string | null;
   next_teaser: string | null;
   is_published: boolean;
+  session_selection_mode: SessionSelectionMode;
+  max_selectable_sessions: number | null;
 }
 
 export type ProgramStatus = "draft" | "scheduled" | "recruiting" | "closed" | "in_progress" | "completed" | "cancelled";

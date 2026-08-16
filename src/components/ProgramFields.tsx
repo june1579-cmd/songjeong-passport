@@ -19,6 +19,8 @@ export interface ProgramFormState {
   category: string;
   nextProgramId: string;
   nextTeaser: string;
+  sessionSelectionMode: "select" | "fixed";
+  maxSelectableSessions: number | null;
 }
 
 export interface SessionDraft {
@@ -127,6 +129,45 @@ export function ProgramBasicFields({
           </label>
         </Field>
       </div>
+
+      <Field label="회차 신청 방식">
+        <div className="space-y-2">
+          <label className={`flex items-start gap-2 text-xs rounded-lg border px-3 py-2.5 cursor-pointer ${form.sessionSelectionMode === "select" ? "border-navy bg-sand" : "border-line bg-white"}`}>
+            <input type="radio" className="mt-0.5" checked={form.sessionSelectionMode === "select"} onChange={() => setForm({ ...form, sessionSelectionMode: "select" })} />
+            <span>
+              <span className="block font-medium text-ink">회차 자유 선택</span>
+              <span className="block text-muted mt-0.5">참여자가 원하는 회차를 골라서 신청 (예: 서핑체험 — 1인당 최대 회차 수를 정할 수 있어요)</span>
+            </span>
+          </label>
+          <label className={`flex items-start gap-2 text-xs rounded-lg border px-3 py-2.5 cursor-pointer ${form.sessionSelectionMode === "fixed" ? "border-navy bg-sand" : "border-line bg-white"}`}>
+            <input type="radio" className="mt-0.5" checked={form.sessionSelectionMode === "fixed"} onChange={() => setForm({ ...form, sessionSelectionMode: "fixed" })} />
+            <span>
+              <span className="block font-medium text-ink">고정 기수제</span>
+              <span className="block text-muted mt-0.5">처음 모집된 인원이 전체 회차를 함께 진행 (예: 폐서핑보드 작품 만들기 — 회차 선택 없이 신청 시 전체 회차에 자동 등록)</span>
+            </span>
+          </label>
+        </div>
+        {form.sessionSelectionMode === "select" && (
+          <div className="mt-2">
+            <label className="text-xs font-medium block mb-1.5 text-muted">1인당 최대 신청 회차 수</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                disabled={form.maxSelectableSessions === null}
+                value={form.maxSelectableSessions ?? ""}
+                onChange={(e) => set("maxSelectableSessions", e.target.value ? Number(e.target.value) : null)}
+                placeholder="예: 2"
+                className={`${inputCls} ${form.maxSelectableSessions === null ? "bg-sand text-muted" : ""}`}
+              />
+            </div>
+            <label className="flex items-center gap-1.5 text-xs mt-1.5 text-ink">
+              <input type="checkbox" checked={form.maxSelectableSessions === null} onChange={(e) => set("maxSelectableSessions", e.target.checked ? null : 2)} />
+              제한 없음 (원하는 만큼 회차 선택 가능)
+            </label>
+          </div>
+        )}
+      </Field>
 
       <Field label="대상"><input value={form.target} onChange={(e) => set("target", e.target.value)} className={inputCls} /></Field>
       <Field label="참여요건"><input value={form.requirement} onChange={(e) => set("requirement", e.target.value)} className={inputCls} /></Field>

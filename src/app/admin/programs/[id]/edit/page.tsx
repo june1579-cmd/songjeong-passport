@@ -28,6 +28,8 @@ export default function EditProgramPage() {
           requirement: p.requirement ?? "", prep: p.prep ?? "", instructor: p.instructor ?? "",
           capacity: p.capacity, nextProgramId: p.next_program_id ?? "", nextTeaser: p.next_teaser ?? "",
           category: p.category ?? "",
+          sessionSelectionMode: p.session_selection_mode ?? "select",
+          maxSelectableSessions: p.max_selectable_sessions ?? null,
         });
         setProgramStatus(p.program_status ?? "draft");
       }
@@ -62,6 +64,8 @@ export default function EditProgramPage() {
       emoji: form.emoji, title: form.title, description: form.description, location: form.location,
       address: form.address, fee: form.fee, target: form.target, requirement: form.requirement,
       prep: form.prep, instructor: form.instructor, capacity: form.capacity, category: form.category,
+      session_selection_mode: form.sessionSelectionMode,
+      max_selectable_sessions: form.sessionSelectionMode === "select" ? form.maxSelectableSessions : null,
       program_status: programStatus,
       is_published: ["recruiting", "scheduled", "in_progress", "closed"].includes(programStatus),
       next_program_id: form.nextProgramId || null, next_teaser: form.nextTeaser || null,

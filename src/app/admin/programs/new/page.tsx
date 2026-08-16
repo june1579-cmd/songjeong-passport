@@ -9,6 +9,7 @@ const empty: ProgramFormState = {
   id: "", emoji: "🌊", title: "", description: "", location: "", address: "",
   fee: "무료", target: "", requirement: "", prep: "", instructor: "",
   capacity: null, category: "지역활동", nextProgramId: "", nextTeaser: "",
+  sessionSelectionMode: "select", maxSelectableSessions: null,
 };
 
 export default function NewProgramPage() {
@@ -43,6 +44,8 @@ export default function NewProgramPage() {
       instructor: form.instructor,
       capacity: form.capacity,
       category: form.category,
+      session_selection_mode: form.sessionSelectionMode,
+      max_selectable_sessions: form.sessionSelectionMode === "select" ? form.maxSelectableSessions : null,
       program_status: publish ? "recruiting" : "draft",
       next_program_id: form.nextProgramId || null,
       next_teaser: form.nextTeaser || null,

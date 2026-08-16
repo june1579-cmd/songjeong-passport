@@ -369,3 +369,16 @@ drop policy if exists "anon insert registration_sessions" on registration_sessio
 create policy "anon insert registration_sessions" on registration_sessions for insert with check (true);
 drop policy if exists "public read registration_sessions" on registration_sessions;
 create policy "public read registration_sessions" on registration_sessions for select using (true);
+
+-- =================================================================
+-- 확장 8: 프로그램별 회차 신청 방식 (자유 선택 vs 고정 기수제)
+-- =================================================================
+-- select: 서핑체험처럼 참여자가 원하는 회차를 골라서 신청 (필요시 인당 최대 회차 수 제한)
+-- fixed : 폐서핑보드 작품 만들기처럼 처음 모집된 인원이 전체 회차를 함께 진행하는 고정 기수제.
+--         회차 선택 UI 없이 신청과 동시에 전체 회차에 자동 등록되고, 정원은 프로그램 전체 기준으로 관리한다.
+alter table programs add column if not exists session_selection_mode text not null default 'select'
+  check (session_selection_mode in ('select', 'fixed'));
+alter table programs add column if not exists max_selectable_sessions int; -- null = 제한 없음 (select 모드에서만 사용)
+
+update programs set session_selection_mode = 'select', max_selectable_sessions = 2 where id = 'surf';
+update programs set session_selection_mode = 'fixed', max_selectable_sessions = null where id = 'board-art';

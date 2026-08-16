@@ -128,3 +128,8 @@ insert into photos (program_id, image_url, caption) values
 ('surf', 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=800', '지난 서핑체험 현장'),
 ('board-art', 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800', '완성된 폐서핑보드 작품'),
 (null, 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800', '송정해변 전경');
+
+-- 회차 신청 방식(자유 선택 vs 고정 기수제) — 확장 8 마이그레이션 이후 재시딩 시 반영
+update programs set session_selection_mode = 'select', max_selectable_sessions = 2 where id = 'surf';
+update programs set session_selection_mode = 'fixed', max_selectable_sessions = null where id = 'board-art';
+update programs set session_selection_mode = 'select', max_selectable_sessions = null where id = 'share-event';
