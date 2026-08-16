@@ -185,34 +185,61 @@ export default function ApplicationsPage() {
       </div>
 
       <div className="rounded-xl border border-line overflow-hidden bg-white">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-sand text-navy">
-              <th className="p-2"><input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filtered.length} onChange={toggleAll} /></th>
-              <th className="text-left p-2 font-medium">이름</th>
-              <th className="text-left p-2 font-medium">전화번호</th>
-              <th className="text-left p-2 font-medium">연령대</th>
-              <th className="text-left p-2 font-medium">거주지역</th>
-              <th className="text-left p-2 font-medium">유입경로</th>
-              <th className="text-center p-2 font-medium">기존참여</th>
-              <th className="text-left p-2 font-medium">상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((r) => (
-              <tr key={r.registration.id} className="border-t border-line">
-                <td className="p-2"><input type="checkbox" checked={selectedIds.has(r.registration.id)} onChange={() => toggleOne(r.registration.id)} /></td>
-                <td className="p-2">{r.participant.name}</td>
-                <td className="p-2">{r.participant.phone_number ?? `****-****-${r.participant.phone4}`}</td>
-                <td className="p-2">{r.participant.age_group}</td>
-                <td className="p-2">{r.participant.residence_area}</td>
-                <td className="p-2">{r.registration.acquisition_channel}</td>
-                <td className="p-2 text-center">{r.priorVisits}</td>
-                <td className="p-2"><Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill></td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse" style={{ minWidth: 720 }}>
+            <colgroup>
+              <col style={{ width: 36 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 132 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 128 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 68 }} />
+              <col style={{ width: 108 }} />
+            </colgroup>
+            <thead>
+              <tr className="bg-sand text-navy sticky top-0 z-10">
+                <th className="p-2.5 text-center align-middle">
+                  <input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filtered.length} onChange={toggleAll} />
+                </th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">이름</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">전화번호</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">연령대</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">거주지역</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">유입경로</th>
+                <th className="text-right p-2.5 font-semibold tracking-tight">기존참여</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">상태</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((r, i) => (
+                <tr
+                  key={r.registration.id}
+                  className={`border-t border-line hover:bg-sandLight transition-colors ${selectedIds.has(r.registration.id) ? "bg-seafoamLight/40" : i % 2 === 1 ? "bg-sandLight/40" : ""}`}
+                >
+                  <td className="p-2.5 text-center align-middle">
+                    <input type="checkbox" checked={selectedIds.has(r.registration.id)} onChange={() => toggleOne(r.registration.id)} />
+                  </td>
+                  <td className="p-2.5 align-middle font-medium text-ink whitespace-nowrap">{r.participant.name}</td>
+                  <td className="p-2.5 align-middle whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {r.participant.phone_number ?? `****-****-${r.participant.phone4}`}
+                  </td>
+                  <td className="p-2.5 align-middle text-muted whitespace-nowrap">{r.participant.age_group}</td>
+                  <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.participant.residence_area}>
+                    {r.participant.residence_area}
+                  </td>
+                  <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.registration.acquisition_channel}>
+                    {r.registration.acquisition_channel}
+                  </td>
+                  <td className="p-2.5 align-middle text-right text-ink" style={{ fontVariantNumeric: "tabular-nums" }}>{r.priorVisits}</td>
+                  <td className="p-2.5 align-middle whitespace-nowrap">
+                    <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {filtered.length === 0 && <p className="text-xs text-muted p-4">해당하는 신청자가 없습니다.</p>}
       </div>
 

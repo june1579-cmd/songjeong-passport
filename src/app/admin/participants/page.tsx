@@ -148,12 +148,17 @@ export default function AdminParticipantsPage() {
               <div className="flex items-center gap-3">
                 <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} className="flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ink">{p.name}</p>
-                  <p className="text-[11px] text-muted mt-0.5">
-                    {p.phone_number ?? `****-****-${p.phone4}`} · {p.age_group} · {p.residence_area}
-                  </p>
+                  <p className="text-sm font-medium text-ink mb-1">{p.name}</p>
+                  <div className="grid grid-cols-[52px_1fr] gap-x-2 gap-y-0.5 text-[11px] text-muted max-w-xs">
+                    <span className="text-muted/70">전화번호</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{p.phone_number ?? `****-****-${p.phone4}`}</span>
+                    <span className="text-muted/70">연령대</span>
+                    <span>{p.age_group}</span>
+                    <span className="text-muted/70">거주지역</span>
+                    <span>{p.residence_area}</span>
+                  </div>
                 </div>
-                <div className="flex gap-1.5 flex-shrink-0">
+                <div className="flex gap-1.5 flex-shrink-0 self-start">
                   <button onClick={() => startEdit(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy">수정</button>
                   <button onClick={() => toggleArchive(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy flex items-center gap-1">
                     {p.is_archived ? <><ArchiveRestore size={12} /> 복원</> : <><Archive size={12} /> 보관</>}
