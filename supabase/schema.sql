@@ -397,3 +397,15 @@ alter table programs add column if not exists instructor_photo_url text;
 alter table programs drop constraint if exists programs_next_program_id_fkey;
 alter table programs add constraint programs_next_program_id_fkey
   foreign key (next_program_id) references programs(id) on delete set null;
+
+-- =================================================================
+-- 확장 11: 프로그램/회차 생성·수정을 서버 API 전용으로 전환
+-- =================================================================
+-- 지금까지는 이 정책들 때문에 브라우저에 노출된 anon key로 누구나
+-- 프로그램을 만들거나 내용을 바꿀 수 있었다. 이제 관리자 화면은
+-- /api/admin/programs 서버 라우트(관리자 로그인 확인 + 서비스 롤 키)를 통해서만
+-- 쓰기 작업을 하므로 이 익명 쓰기 정책들은 제거한다. 읽기(public read)는 그대로 유지.
+drop policy if exists "admin write programs" on programs;
+drop policy if exists "admin update programs" on programs;
+drop policy if exists "admin write sessions" on sessions;
+drop policy if exists "admin delete sessions" on sessions;

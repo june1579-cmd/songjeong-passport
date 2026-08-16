@@ -61,28 +61,36 @@ export default function EditProgramPage() {
   const save = async () => {
     setSaving(true);
     setError("");
-    const { error: updErr } = await supabase.from("programs").update({
-      emoji: form.emoji, title: form.title, description: form.description, location: form.location,
-      address: form.address, fee: form.fee, target: form.target, requirement: form.requirement,
-      prep: form.prep, instructor: form.instructor, capacity: form.capacity, category: form.category,
-      instructor_bio: form.instructorBio || null, instructor_photo_url: form.instructorPhotoUrl || null,
-      session_selection_mode: form.sessionSelectionMode,
-      max_selectable_sessions: form.sessionSelectionMode === "select" ? form.maxSelectableSessions : null,
-      program_status: programStatus,
-      is_published: ["recruiting", "scheduled", "in_progress", "closed"].includes(programStatus),
-      next_program_id: form.nextProgramId || null, next_teaser: form.nextTeaser || null,
-    }).eq("id", id);
-    if (updErr) { setError("저장 중 문제가 발생했습니다."); setSaving(false); return; }
-
-    if (removedSessionIds.length) await supabase.from("sessions").delete().in("id", removedSessionIds);
 
     const newOnes = sessions.filter((s) => s.key.startsWith("new-") && s.session_date);
-    if (newOnes.length) {
-      await supabase.from("sessions").insert(newOnes.map((s) => ({ program_id: id, session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })));
-    }
     const existingOnes = sessions.filter((s) => s.key.startsWith("existing-"));
-    for (const s of existingOnes) {
-      await supabase.from("sessions").update({ session_label: s.session_label, session_date: s.session_date, capacity: s.capacity }).eq("id", existingSessionIds[s.key]);
+
+    const res = await fetch(`/api/admin/programs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        program: {
+          emoji: form.emoji, title: form.title, description: form.description, location: form.location,
+          address: form.address, fee: form.fee, target: form.target, requirement: form.requirement,
+          prep: form.prep, instructor: form.instructor, capacity: form.capacity, category: form.category,
+          instructor_bio: form.instructorBio || null, instructor_photo_url: form.instructorPhotoUrl || null,
+          session_selection_mode: form.sessionSelectionMode,
+          max_selectable_sessions: form.sessionSelectionMode === "select" ? form.maxSelectableSessions : null,
+          program_status: programStatus,
+          is_published: ["recruiting", "scheduled", "in_progress", "closed"].includes(programStatus),
+          next_program_id: form.nextProgramId || null, next_teaser: form.nextTeaser || null,
+        },
+        newSessions: newOnes.map((s) => ({ session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })),
+        updatedSessions: existingOnes.map((s) => ({ id: existingSessionIds[s.key], session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })),
+        removedSessionIds,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "저장 중 문제가 발생했습니다.");
+      setSaving(false);
+      return;
     }
 
     setSaving(false);

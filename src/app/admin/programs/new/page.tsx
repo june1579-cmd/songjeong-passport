@@ -31,41 +31,47 @@ export default function NewProgramPage() {
     if (!canSubmit) return;
     setSaving(true);
     setError("");
-    const { error: insertErr } = await supabase.from("programs").insert({
-      id: form.id.trim(),
-      emoji: form.emoji,
-      title: form.title,
-      description: form.description,
-      location: form.location,
-      address: form.address,
-      fee: form.fee,
-      target: form.target,
-      requirement: form.requirement,
-      prep: form.prep,
-      instructor: form.instructor,
-      instructor_bio: form.instructorBio || null,
-      instructor_photo_url: form.instructorPhotoUrl || null,
-      capacity: form.capacity,
-      category: form.category,
-      session_selection_mode: form.sessionSelectionMode,
-      max_selectable_sessions: form.sessionSelectionMode === "select" ? form.maxSelectableSessions : null,
-      program_status: publish ? "recruiting" : "draft",
-      next_program_id: form.nextProgramId || null,
-      next_teaser: form.nextTeaser || null,
-      is_published: publish,
+
+    const validSessions = sessions.filter((s) => s.session_date);
+
+    const res = await fetch("/api/admin/programs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        program: {
+          id: form.id.trim(),
+          emoji: form.emoji,
+          title: form.title,
+          description: form.description,
+          location: form.location,
+          address: form.address,
+          fee: form.fee,
+          target: form.target,
+          requirement: form.requirement,
+          prep: form.prep,
+          instructor: form.instructor,
+          instructor_bio: form.instructorBio || null,
+          instructor_photo_url: form.instructorPhotoUrl || null,
+          capacity: form.capacity,
+          category: form.category,
+          session_selection_mode: form.sessionSelectionMode,
+          max_selectable_sessions: form.sessionSelectionMode === "select" ? form.maxSelectableSessions : null,
+          program_status: publish ? "recruiting" : "draft",
+          next_program_id: form.nextProgramId || null,
+          next_teaser: form.nextTeaser || null,
+          is_published: publish,
+        },
+        sessions: validSessions.map((s) => ({ session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })),
+      }),
     });
-    if (insertErr) {
-      setError(insertErr.message.includes("duplicate") ? "이미 사용 중인 프로그램 ID입니다." : "저장 중 문제가 발생했습니다.");
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(res.status === 409 ? "이미 사용 중인 프로그램 ID입니다." : (body.error ?? "저장 중 문제가 발생했습니다."));
       setSaving(false);
       return;
     }
 
-    const validSessions = sessions.filter((s) => s.session_date);
-    if (validSessions.length) {
-      await supabase.from("sessions").insert(
-        validSessions.map((s) => ({ program_id: form.id.trim(), session_label: s.session_label, session_date: s.session_date, capacity: s.capacity }))
-      );
-    }
     setSaving(false);
     router.push("/admin/programs");
   };
