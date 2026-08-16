@@ -59,7 +59,8 @@ export default function HomePage() {
 
       const pid = getStoredParticipantId();
       if (pid) {
-        const { data: participant } = await supabase.from("participants").select("*").eq("id", pid).single();
+        const { data: participantRaw } = await supabase.rpc("rpc_get_my_participant", { p_id: pid }).maybeSingle();
+        const participant = participantRaw as Participant | null;
         setMe(participant);
         if (participant) {
           const { data: mr } = await supabase.from("registrations").select("*").eq("participant_id", pid);

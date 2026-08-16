@@ -291,3 +291,60 @@ drop policy if exists "admin delete participants" on participants;
 create policy "admin delete participants" on participants for delete using (true);
 drop policy if exists "admin update participants" on participants;
 create policy "admin update participants" on participants for update using (true);
+
+-- =================================================================
+-- 확장 6: 참여자 개인정보 보호 강화 — 익명 사용자의 전체 조회(스크래핑) 차단
+-- =================================================================
+
+-- 지금까지는 이 정책 때문에 브라우저에 노출된 anon key로 누구나
+-- participants 테이블(이름/전화번호/연령대/거주지역)을 통째로 읽을 수 있었다.
+-- 이 정책을 없애고, 앱에 실제로 필요한 조회만 좁게 허용하는 함수로 대체한다.
+drop policy if exists "anon read participants" on participants;
+
+-- 이름+전화번호 뒤4자리로 본인 확인 (패스포트 로그인, 기존 참여자 매칭용) — 필요한 컬럼만 반환
+create or replace function rpc_find_participant(p_name text, p_phone4 text)
+returns table (id uuid, name text, age_group text, residence_area text, phone_number text)
+language sql security definer set search_path = public as $$
+  select id, name, age_group, residence_area, phone_number
+  from participants
+  where name = p_name and phone4 = p_phone4
+  limit 1;
+$$;
+
+-- 이미 로그인되어 id를 알고 있는 상태에서 내 정보 불러오기 (id는 추측 불가능한 UUID)
+create or replace function rpc_get_my_participant(p_id uuid)
+returns table (id uuid, name text, age_group text, residence_area text, phone_number text, phone4 text, privacy_consent_at timestamptz, is_archived boolean, created_at timestamptz)
+language sql security definer set search_path = public as $$
+  select id, name, age_group, residence_area, phone_number, phone4, privacy_consent_at, is_archived, created_at
+  from participants
+  where id = p_id
+  limit 1;
+$$;
+
+-- 전화번호로 기존 가입 여부만 확인 (id만 반환, 다른 개인정보 노출 없음)
+create or replace function rpc_check_phone_exists(p_phone_number text)
+returns uuid
+language sql security definer set search_path = public as $$
+  select id from participants where phone_number = p_phone_number limit 1;
+$$;
+
+-- 회원가입 시 참여자 생성 (insert 후 값을 돌려받으려면 select 권한이 필요한데,
+-- select 정책을 없앴으므로 생성+반환을 함수 안에서 함께 처리)
+create or replace function rpc_create_participant(
+  p_name text, p_phone4 text, p_phone_number text, p_age_group text, p_residence_area text
+)
+returns uuid
+language sql security definer set search_path = public as $$
+  insert into participants (name, phone4, phone_number, age_group, residence_area, privacy_consent_at)
+  values (p_name, p_phone4, p_phone_number, p_age_group, p_residence_area, now())
+  returning id;
+$$;
+
+grant execute on function rpc_find_participant(text, text) to anon;
+grant execute on function rpc_get_my_participant(uuid) to anon;
+grant execute on function rpc_check_phone_exists(text) to anon;
+grant execute on function rpc_create_participant(text, text, text, text, text) to anon;
+
+-- participants insert/update/delete는 이제 서버 전용 API(서비스 롤 키)로만 수행하므로
+-- 익명 직접 insert 정책은 제거한다(가입은 위 rpc_create_participant를 통해서만 가능).
+drop policy if exists "anon insert participants" on participants;

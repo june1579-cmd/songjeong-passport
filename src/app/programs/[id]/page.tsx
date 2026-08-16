@@ -67,7 +67,8 @@ export default function ProgramDetailPage() {
 
     const participantId = getStoredParticipantId();
     if (participantId) {
-      const { data: participant } = await supabase.from("participants").select("*").eq("id", participantId).single();
+      const { data: participantRaw } = await supabase.rpc("rpc_get_my_participant", { p_id: participantId }).maybeSingle();
+      const participant = participantRaw as Participant | null;
       setMe(participant);
       if (participant) {
         const { data: reg } = await supabase

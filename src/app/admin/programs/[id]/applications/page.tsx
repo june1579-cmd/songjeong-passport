@@ -3,14 +3,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Download, Check, Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Program, Registration, Participant, Attendance, ApplicationStatus, APPLICATION_STATUS_LABEL, Notification } from "@/lib/types";
-import { promoteNextWaitlisted } from "@/lib/waitlist";
+import { Program, Registration, Participant, ApplicationStatus, APPLICATION_STATUS_LABEL, Notification } from "@/lib/types";
 import Pill from "@/components/Pill";
 
 interface Row {
   registration: Registration;
   participant: Participant;
-  priorVisits: number; // 이 참여자가 다른 프로그램에서 출석한 횟수 (기존 참여 이력)
+  priorVisits: number;
 }
 
 const STATUS_TONE: Record<ApplicationStatus, "sand" | "seafoam" | "coral"> = {
@@ -21,6 +20,12 @@ const STATUS_TONE: Record<ApplicationStatus, "sand" | "seafoam" | "coral"> = {
   cancelled: "sand",
 };
 
+async function api(path: string, options?: RequestInit) {
+  const res = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...options?.headers } });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? "요청 실패");
+  return res.json();
+}
+
 export default function ApplicationsPage() {
   const { id } = useParams<{ id: string }>();
   const [program, setProgram] = useState<Program | null>(null);
@@ -28,42 +33,29 @@ export default function ApplicationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | ApplicationStatus>("all");
   const [notifications, setNotifications] = useState<(Notification & { participant_name: string })[]>([]);
-
-  const loadNotifications = async () => {
-    const { data: notifs } = await supabase.from("notifications").select("*").eq("program_id", id).order("created_at", { ascending: false }).limit(10);
-    if (!notifs?.length) { setNotifications([]); return; }
-    const { data: participants } = await supabase.from("participants").select("id,name").in("id", notifs.map((n) => n.participant_id));
-    setNotifications(notifs.map((n) => ({ ...n, participant_name: participants?.find((p) => p.id === n.participant_id)?.name ?? "" })));
-  };
+  const [error, setError] = useState("");
 
   const load = async () => {
     const { data: prog } = await supabase.from("programs").select("*").eq("id", id).single();
     setProgram(prog);
 
-    const { data: regs } = await supabase.from("registrations").select("*").eq("program_id", id).order("registered_at");
-    const participantIds = (regs ?? []).map((r) => r.participant_id);
-    if (!participantIds.length) { setRows([]); return; }
-
-    const { data: participants } = await supabase.from("participants").select("*").in("id", participantIds);
-    const { data: allAttendance } = await supabase.from("attendance").select("participant_id, program_id").in("participant_id", participantIds);
-
-    const priorVisitsMap: Record<string, Set<string>> = {};
-    (allAttendance as Attendance[] ?? []).forEach((a) => {
-      priorVisitsMap[a.participant_id] = priorVisitsMap[a.participant_id] ?? new Set();
-      priorVisitsMap[a.participant_id].add(a.program_id);
-    });
-
-    const list: Row[] = (regs ?? [])
-      .map((r) => {
-        const participant = (participants ?? []).find((p) => p.id === r.participant_id);
-        if (!participant) return null;
-        return { registration: r, participant, priorVisits: priorVisitsMap[r.participant_id]?.size ?? 0 };
-      })
-      .filter(Boolean) as Row[];
-    setRows(list);
+    try {
+      const { registrations, participants, priorVisitsMap, notifications: notifs } = await api(`/api/admin/applications/${id}`);
+      const list: Row[] = (registrations ?? [])
+        .map((r: Registration) => {
+          const participant = (participants ?? []).find((p: Participant) => p.id === r.participant_id);
+          if (!participant) return null;
+          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0 };
+        })
+        .filter(Boolean) as Row[];
+      setRows(list);
+      setNotifications(notifs ?? []);
+    } catch (e: any) {
+      setError(e.message ?? "불러오기에 실패했습니다.");
+    }
   };
 
-  useEffect(() => { load(); loadNotifications(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.registration.status === filter);
 
@@ -79,20 +71,16 @@ export default function ApplicationsPage() {
 
   const bulkUpdate = async (status: ApplicationStatus) => {
     if (!selectedIds.size) return;
-    // 취소/미선정으로 바뀌는 대상 중 원래 '선정' 상태였던 사람 → 자리가 비므로 대기자 승격 대상
-    const freed = (status === "cancelled" || status === "rejected")
-      ? rows.filter((r) => selectedIds.has(r.registration.id) && r.registration.status === "selected")
-      : [];
-
-    await supabase.from("registrations").update({ status }).in("id", [...selectedIds]);
-
-    for (const r of freed) {
-      await promoteNextWaitlisted(r.registration.program_id, status);
+    try {
+      await api(`/api/admin/applications/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ registrationIds: [...selectedIds], status }),
+      });
+    } catch (e: any) {
+      setError(e.message ?? "처리 중 문제가 발생했습니다.");
     }
-
     setSelectedIds(new Set());
     load();
-    loadNotifications();
   };
 
   const counts = {
@@ -161,6 +149,7 @@ export default function ApplicationsPage() {
       <p className="text-xs text-muted mb-4">
         신청 {counts.total}명 · 선정 {counts.selected}명 · 대기 {counts.waitlisted}명 · 미선정 {counts.rejected}명
       </p>
+      {error && <p className="text-xs text-coralDark mb-2">{error}</p>}
 
       <div className="flex flex-wrap gap-2 mb-3">
         {(["all", "applied", "selected", "waitlisted", "rejected", "cancelled"] as const).map((f) => (

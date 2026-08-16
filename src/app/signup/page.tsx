@@ -60,37 +60,32 @@ function SignupInner() {
     setError("");
 
     const phone4 = phoneRaw.slice(-4);
-    const { data: existing } = await supabase.from("participants").select("id").eq("phone_number", phoneRaw).maybeSingle();
-    if (existing) {
-      setStoredParticipantId(existing.id);
+    const { data: existingId } = await supabase.rpc("rpc_check_phone_exists", { p_phone_number: phoneRaw });
+    if (existingId) {
+      setStoredParticipantId(existingId as string);
       setSaving(false);
       router.push(next);
       return;
     }
 
-    const { data: created, error: insertErr } = await supabase
-      .from("participants")
-      .insert({
-        name: name.trim(),
-        phone4,
-        phone_number: phoneRaw,
-        age_group: ageGroup,
-        residence_area: residence,
-        privacy_consent_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-    if (insertErr) { setError("가입 처리 중 문제가 발생했습니다. 다시 시도해주세요."); setSaving(false); return; }
+    const { data: newId, error: insertErr } = await supabase.rpc("rpc_create_participant", {
+      p_name: name.trim(),
+      p_phone4: phone4,
+      p_phone_number: phoneRaw,
+      p_age_group: ageGroup,
+      p_residence_area: residence,
+    });
+    if (insertErr || !newId) { setError("가입 처리 중 문제가 발생했습니다. 다시 시도해주세요."); setSaving(false); return; }
 
     await supabase.from("consents").insert([
-      { participant_id: created.id, consent_type: "privacy_required", agreed: true },
-      { participant_id: created.id, consent_type: "operation_required", agreed: true },
-      { participant_id: created.id, consent_type: "attendance_required", agreed: true },
-      { participant_id: created.id, consent_type: "marketing_optional", agreed: agreeMarketing },
-      { participant_id: created.id, consent_type: "media_optional", agreed: agreeMedia },
+      { participant_id: newId, consent_type: "privacy_required", agreed: true },
+      { participant_id: newId, consent_type: "operation_required", agreed: true },
+      { participant_id: newId, consent_type: "attendance_required", agreed: true },
+      { participant_id: newId, consent_type: "marketing_optional", agreed: agreeMarketing },
+      { participant_id: newId, consent_type: "media_optional", agreed: agreeMedia },
     ]);
 
-    setStoredParticipantId(created.id);
+    setStoredParticipantId(newId as string);
     setSaving(false);
     router.push(next);
   };

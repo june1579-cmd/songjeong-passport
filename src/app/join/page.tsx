@@ -25,7 +25,7 @@ function JoinPageInner() {
       router.replace(`/signup?next=${encodeURIComponent(`/join?programId=${programId}`)}`);
       return;
     }
-    supabase.from("participants").select("*").eq("id", pid).single().then(({ data }) => setMe(data ?? null));
+    supabase.rpc("rpc_get_my_participant", { p_id: pid }).maybeSingle().then(({ data }) => setMe((data as Participant) ?? null));
   }, [programId, router]);
 
   const submit = async () => {

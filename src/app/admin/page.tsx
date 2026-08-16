@@ -16,18 +16,24 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: progs }, { count }, { data: regs }, { data: att }, { data: svs }] = await Promise.all([
+      const [{ data: progs }, { data: regs }, { data: att }, { data: svs }] = await Promise.all([
         supabase.from("programs").select("*").order("created_at"),
-        supabase.from("participants").select("*", { count: "exact", head: true }),
         supabase.from("registrations").select("*"),
         supabase.from("attendance").select("*"),
         supabase.from("surveys").select("*"),
       ]);
       setPrograms(progs ?? []);
-      setParticipantsCount(count ?? 0);
       setRegistrations(regs ?? []);
       setAttendance(att ?? []);
       setSurveys(svs ?? []);
+
+      try {
+        const res = await fetch("/api/admin/participants");
+        const { participants } = await res.json();
+        setParticipantsCount(participants?.length ?? 0);
+      } catch {
+        setParticipantsCount(0);
+      }
     })();
   }, []);
 

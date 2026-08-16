@@ -1,8 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Search, Archive, ArchiveRestore, Trash2, Save, AlertTriangle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { Participant, AGE_OPTIONS, RESIDENCE_OPTIONS } from "@/lib/types";
+
+async function api(path: string, options?: RequestInit) {
+  const res = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...options?.headers } });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? "요청 실패");
+  return res.json();
+}
 
 export default function AdminParticipantsPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -13,10 +18,15 @@ export default function AdminParticipantsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [error, setError] = useState("");
 
   const load = async () => {
-    const { data } = await supabase.from("participants").select("*").order("created_at", { ascending: false });
-    setParticipants(data ?? []);
+    try {
+      const { participants: data } = await api("/api/admin/participants");
+      setParticipants(data ?? []);
+    } catch (e: any) {
+      setError(e.message ?? "불러오기에 실패했습니다.");
+    }
   };
   useEffect(() => { load(); }, []);
 
@@ -43,26 +53,26 @@ export default function AdminParticipantsPage() {
 
   const saveEdit = async (id: string) => {
     if (!editDraft) return;
-    await supabase.from("participants").update(editDraft).eq("id", id);
+    await api("/api/admin/participants", { method: "PATCH", body: JSON.stringify({ id, patch: editDraft }) });
     setEditingId(null);
     setEditDraft(null);
     load();
   };
 
   const toggleArchive = async (p: Participant) => {
-    await supabase.from("participants").update({ is_archived: !p.is_archived }).eq("id", p.id);
+    await api("/api/admin/participants", { method: "PATCH", body: JSON.stringify({ id: p.id, patch: { is_archived: !p.is_archived } }) });
     load();
   };
 
   const remove = async (p: Participant) => {
     if (!window.confirm(`"${p.name}" 참여자를 완전히 삭제할까요? 신청/출석/설문 등 관련 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.`)) return;
-    await supabase.from("participants").delete().eq("id", p.id);
+    await api("/api/admin/participants", { method: "DELETE", body: JSON.stringify({ ids: [p.id] }) });
     load();
   };
 
   const bulkDelete = async () => {
     if (confirmText !== "삭제") return;
-    await supabase.from("participants").delete().in("id", [...selectedIds]);
+    await api("/api/admin/participants", { method: "DELETE", body: JSON.stringify({ ids: [...selectedIds] }) });
     setSelectedIds(new Set());
     setConfirmOpen(false);
     setConfirmText("");
@@ -73,6 +83,7 @@ export default function AdminParticipantsPage() {
     <div className="p-4 pb-16">
       <h1 className="font-display text-lg text-navy mb-1">참여자 명단 관리</h1>
       <p className="text-xs text-muted mb-4">이름/전화번호로 검색, 정보 수정, 보관(비활성화), 개별·일괄 삭제가 가능합니다.</p>
+      {error && <p className="text-xs text-coralDark mb-2">{error}</p>}
 
       <div className="flex gap-2 mb-3">
         <div className="flex-1 flex items-center gap-2 border border-line rounded-lg px-3 py-2 bg-white">

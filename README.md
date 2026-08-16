@@ -161,3 +161,19 @@ truncate table stamps, surveys, attendance, registrations, phone_verifications, 
 delete from participants;
 -- programs, sessions, announcements, photos는 그대로 유지
 ```
+
+## 13. 실사용 전환 (2) — 참여자 개인정보 보호 강화
+
+기존에는 `participants` 테이블(이름/전화번호/연령대/거주지역)에 익명 사용자도 전체 조회가 가능한 RLS 정책이 있었다.
+브라우저에 노출된 anon key로 **누구나 개발자도구/직접 API 호출을 통해 전체 참여자 개인정보를 다운로드할 수 있는 상태**였다.
+
+이제 다음 구조로 바뀌었다.
+
+- `participants` 테이블의 "전체 조회" RLS 정책을 제거했다.
+- 주민 화면(로그인, 회원가입, 내 정보 조회)은 **좁은 범위만 반환하는 Postgres 함수**(`rpc_find_participant`, `rpc_get_my_participant`, `rpc_check_phone_exists`, `rpc_create_participant`)를 통해서만 접근한다. 이 함수들은 이름+전화번호 뒤4자리 매칭, 또는 이미 알고 있는(추측 불가능한) 본인의 UUID로만 정보를 반환한다.
+- **관리자 전용 데이터**(참여자 명단 전체, 신청자 관리 화면)는 `/api/admin/participants`, `/api/admin/applications/[programId]` 같은 서버 Route Handler를 거친다. 이 라우트는 (1) 관리자 로그인 쿠키를 서버에서 검증하고, (2) `SUPABASE_SERVICE_ROLE_KEY`(RLS를 우회하는 서버 전용 키)로 조회한다. 브라우저는 이 결과를 fetch로만 받아본다 — 직접 DB에 접근하지 않는다.
+
+**Vercel 환경변수에 반드시 추가해야 한다**: `SUPABASE_SERVICE_ROLE_KEY` (Supabase > API Keys > Secret keys에서 발급, `NEXT_PUBLIC_` 접두사 절대 금지).
+
+### 아직 남은 낮은 우선순위 항목
+`registrations`, `attendance`, `consents` 테이블은 여전히 익명 조회가 넓게 열려있다(참여자의 신청 상태, 체크인 시각, 동의 여부가 참여자 ID와 함께 노출될 수 있음). `participants`만큼 직접적인 PII는 아니지만, 실사용 규모가 커지면 같은 방식(RPC 또는 서버 API 경유)으로 좁히는 것을 권장한다.

@@ -38,12 +38,13 @@ export default function PassportPage() {
   useEffect(() => {
     const pid = getStoredParticipantId();
     if (!pid) { setMe(null); return; }
-    supabase.from("participants").select("*").eq("id", pid).single().then(({ data }) => (data ? loadPassport(data) : setMe(null)));
+    supabase.rpc("rpc_get_my_participant", { p_id: pid }).maybeSingle().then(({ data }) => (data ? loadPassport(data as Participant) : setMe(null)));
   }, []);
 
   const login = async () => {
-    const { data } = await supabase.from("participants").select("*").eq("name", name.trim()).eq("phone4", phone4.trim()).maybeSingle();
-    if (data) { setStoredParticipantId(data.id); loadPassport(data); setError(""); }
+    const { data } = await supabase.rpc("rpc_find_participant", { p_name: name.trim(), p_phone4: phone4.trim() }).maybeSingle();
+    const typedData = data as Participant | null;
+    if (typedData) { setStoredParticipantId(typedData.id); loadPassport(typedData); setError(""); }
     else setError("일치하는 참여자 정보를 찾지 못했어요. 프로그램 신청 시 입력한 정보로 다시 확인해주세요.");
   };
 
