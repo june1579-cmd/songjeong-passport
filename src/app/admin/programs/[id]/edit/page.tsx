@@ -42,7 +42,7 @@ export default function EditProgramPage() {
       const idMap: Record<string, string> = {};
       (sess ?? []).forEach((s: Session) => {
         const key = `existing-${s.id}`;
-        drafts.push({ key, session_label: s.session_label, session_date: s.session_date, capacity: s.capacity });
+        drafts.push({ key, session_label: s.session_label, session_date: s.session_date, start_time: s.start_time?.slice(0, 5) ?? "10:00", end_time: s.end_time?.slice(0, 5) ?? "12:00", capacity: s.capacity });
         idMap[key] = s.id;
       });
       setSessions(drafts);
@@ -80,8 +80,8 @@ export default function EditProgramPage() {
           is_published: ["recruiting", "scheduled", "in_progress", "closed"].includes(programStatus),
           next_program_id: form.nextProgramId || null, next_teaser: form.nextTeaser || null,
         },
-        newSessions: newOnes.map((s) => ({ session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })),
-        updatedSessions: existingOnes.map((s) => ({ id: existingSessionIds[s.key], session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })),
+        newSessions: newOnes.map((s) => ({ session_label: s.session_label, session_date: s.session_date, start_time: s.start_time, end_time: s.end_time, capacity: s.capacity })),
+        updatedSessions: existingOnes.map((s) => ({ id: existingSessionIds[s.key], session_label: s.session_label, session_date: s.session_date, start_time: s.start_time, end_time: s.end_time, capacity: s.capacity })),
         removedSessionIds,
       }),
     });

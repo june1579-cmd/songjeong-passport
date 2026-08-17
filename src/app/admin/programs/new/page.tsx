@@ -61,7 +61,7 @@ export default function NewProgramPage() {
           next_teaser: form.nextTeaser || null,
           is_published: publish,
         },
-        sessions: validSessions.map((s) => ({ session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })),
+        sessions: validSessions.map((s) => ({ session_label: s.session_label, session_date: s.session_date, start_time: s.start_time, end_time: s.end_time, capacity: s.capacity })),
       }),
     });
 

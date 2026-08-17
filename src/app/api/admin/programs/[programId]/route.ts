@@ -9,8 +9,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { programId:
   const body = await req.json();
   const { program, newSessions, updatedSessions, removedSessionIds } = body as {
     program: Record<string, unknown>;
-    newSessions?: { session_label: string; session_date: string; capacity: number | null }[];
-    updatedSessions?: { id: string; session_label: string; session_date: string; capacity: number | null }[];
+    newSessions?: { session_label: string; session_date: string; start_time?: string; end_time?: string; capacity: number | null }[];
+    updatedSessions?: { id: string; session_label: string; session_date: string; start_time?: string; end_time?: string; capacity: number | null }[];
     removedSessionIds?: string[];
   };
 
@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { programId:
     for (const s of updatedSessions) {
       const { error } = await admin
         .from("sessions")
-        .update({ session_label: s.session_label, session_date: s.session_date, capacity: s.capacity })
+        .update({ session_label: s.session_label, session_date: s.session_date, start_time: s.start_time, end_time: s.end_time, capacity: s.capacity })
         .eq("id", s.id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     }

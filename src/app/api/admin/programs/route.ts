@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { program, sessions } = body as {
     program: Record<string, unknown> & { id: string };
-    sessions?: { session_label: string; session_date: string; capacity: number | null }[];
+    sessions?: { session_label: string; session_date: string; start_time?: string; end_time?: string; capacity: number | null }[];
   };
 
   const { error: insertErr } = await admin.from("programs").insert(program);

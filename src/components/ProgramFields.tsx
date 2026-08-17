@@ -47,6 +47,8 @@ export interface SessionDraft {
   key: string;
   session_label: string;
   session_date: string;
+  start_time: string;
+  end_time: string;
   capacity: number | null; // null = 이 회차는 정원 제한 없음
 }
 
@@ -308,7 +310,7 @@ export function SessionEditor({
   const add = () =>
     setSessions([
       ...sessions,
-      { key: `new-${Date.now()}-${Math.random()}`, session_label: `${sessions.length + 1}차`, session_date: "", capacity: defaultCapacity },
+      { key: `new-${Date.now()}-${Math.random()}`, session_label: `${sessions.length + 1}차`, session_date: "", start_time: "10:00", end_time: "12:00", capacity: defaultCapacity },
     ]);
   const update = (key: string, patch: Partial<SessionDraft>) => setSessions(sessions.map((s) => (s.key === key ? { ...s, ...patch } : s)));
   const remove = (key: string) => setSessions(sessions.filter((s) => s.key !== key));
@@ -333,6 +335,22 @@ export function SessionEditor({
                 className="border border-line rounded-lg px-2.5 py-2 text-xs"
               />
               <button onClick={() => remove(s.key)} className="text-coralDark p-1"><Trash2 size={16} /></button>
+            </div>
+            <div className="flex items-center gap-2 pl-0.5">
+              <span className="text-[11px] text-muted">시간</span>
+              <input
+                type="time"
+                value={s.start_time}
+                onChange={(e) => update(s.key, { start_time: e.target.value })}
+                className="border border-line rounded-lg px-2 py-1 text-xs"
+              />
+              <span className="text-[11px] text-muted">~</span>
+              <input
+                type="time"
+                value={s.end_time}
+                onChange={(e) => update(s.key, { end_time: e.target.value })}
+                className="border border-line rounded-lg px-2 py-1 text-xs"
+              />
             </div>
             <div className="flex items-center gap-2 pl-0.5">
               <span className="text-[11px] text-muted">이 회차 정원</span>
