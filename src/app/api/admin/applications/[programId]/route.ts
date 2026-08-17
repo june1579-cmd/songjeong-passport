@@ -35,8 +35,17 @@ export async function GET(req: NextRequest, { params }: { params: { programId: s
 
   const { data: programAttendance } = await admin.from("attendance").select("participant_id, session_id, checked_in_at").eq("program_id", programId);
   const { data: sessions } = await admin.from("sessions").select("id, session_label, session_date").eq("program_id", programId);
+  const { data: registrationSessions } = await admin.from("registration_sessions").select("registration_id, session_id").eq("program_id", programId);
 
-  return NextResponse.json({ registrations: regs ?? [], participants, priorVisitsMap, notifications, attendance: programAttendance ?? [], sessions: sessions ?? [] });
+  return NextResponse.json({
+    registrations: regs ?? [],
+    participants,
+    priorVisitsMap,
+    notifications,
+    attendance: programAttendance ?? [],
+    sessions: sessions ?? [],
+    registrationSessions: registrationSessions ?? [],
+  });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { programId: string } }) {

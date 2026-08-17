@@ -10,6 +10,7 @@ interface Row {
   registration: Registration;
   participant: Participant;
   priorVisits: number;
+  sessionLabels: string;
 }
 
 const STATUS_TONE: Record<ApplicationStatus, "sand" | "seafoam" | "coral"> = {
@@ -42,12 +43,21 @@ export default function ApplicationsPage() {
     setProgram(prog);
 
     try {
-      const { registrations, participants, priorVisitsMap, notifications: notifs, attendance, sessions } = await api(`/api/admin/applications/${id}`);
+      const { registrations, participants, priorVisitsMap, notifications: notifs, attendance, sessions, registrationSessions } = await api(`/api/admin/applications/${id}`);
+      const sessionMap: Record<string, string> = {};
+      (sessions ?? []).forEach((s: { id: string; session_label: string }) => (sessionMap[s.id] = s.session_label));
+      const labelsByRegistration: Record<string, string[]> = {};
+      (registrationSessions ?? []).forEach((rs: { registration_id: string; session_id: string }) => {
+        labelsByRegistration[rs.registration_id] = labelsByRegistration[rs.registration_id] ?? [];
+        if (sessionMap[rs.session_id]) labelsByRegistration[rs.registration_id].push(sessionMap[rs.session_id]);
+      });
       const list: Row[] = (registrations ?? [])
         .map((r: Registration) => {
           const participant = (participants ?? []).find((p: Participant) => p.id === r.participant_id);
           if (!participant) return null;
-          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0 };
+          const labels = labelsByRegistration[r.id];
+          const sessionLabels = labels?.length ? labels.join(", ") : "-";
+          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0, sessionLabels };
         })
         .filter(Boolean) as Row[];
       setRows(list);
@@ -95,7 +105,7 @@ export default function ApplicationsPage() {
   };
 
   const downloadCsv = () => {
-    const header = ["이름", "전화번호", "연령대", "거주지역", "유입경로", "신청일", "기존참여횟수", "상태"];
+    const header = ["이름", "전화번호", "연령대", "거주지역", "유입경로", "신청일", "기존참여횟수", "신청 회차", "상태"];
     const lines = rows.map((r) => [
       r.participant.name,
       r.participant.phone_number ?? `****-****-${r.participant.phone4}`,
@@ -104,6 +114,7 @@ export default function ApplicationsPage() {
       r.registration.acquisition_channel,
       new Date(r.registration.registered_at).toLocaleDateString("ko-KR"),
       String(r.priorVisits),
+      r.sessionLabels,
       APPLICATION_STATUS_LABEL[r.registration.status],
     ]);
     const csv = [header, ...lines].map((row) => row.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -194,6 +205,7 @@ export default function ApplicationsPage() {
               <col style={{ width: 128 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 68 }} />
+              <col style={{ width: 110 }} />
               <col style={{ width: 108 }} />
             </colgroup>
             <thead>
@@ -207,6 +219,7 @@ export default function ApplicationsPage() {
                 <th className="text-left p-2.5 font-semibold tracking-tight">거주지역</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">유입경로</th>
                 <th className="text-right p-2.5 font-semibold tracking-tight">기존참여</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">신청 회차</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">상태</th>
               </tr>
             </thead>
@@ -231,6 +244,9 @@ export default function ApplicationsPage() {
                     {r.registration.acquisition_channel}
                   </td>
                   <td className="p-2.5 align-middle text-right text-ink" style={{ fontVariantNumeric: "tabular-nums" }}>{r.priorVisits}</td>
+                  <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.sessionLabels}>
+                    {r.sessionLabels}
+                  </td>
                   <td className="p-2.5 align-middle whitespace-nowrap">
                     <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
                   </td>
