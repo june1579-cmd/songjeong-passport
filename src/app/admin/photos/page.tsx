@@ -27,12 +27,17 @@ export default function AdminPhotosPage() {
     const path = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "")}`;
     const { error: upErr } = await supabase.storage.from("gallery").upload(path, file);
     if (upErr) {
-      setError("업로드에 실패했습니다. Supabase에 'gallery' 스토리지 버킷이 생성되어 있는지 확인해주세요.");
+      setError(`업로드 실패: ${upErr.message}`);
       setUploading(false);
       return;
     }
     const { data: pub } = supabase.storage.from("gallery").getPublicUrl(path);
-    await supabase.from("photos").insert({ program_id: programId || null, image_url: pub.publicUrl, caption });
+    const { error: insertErr } = await supabase.from("photos").insert({ program_id: programId || null, image_url: pub.publicUrl, caption });
+    if (insertErr) {
+      setError(`사진 정보 저장 실패: ${insertErr.message}`);
+      setUploading(false);
+      return;
+    }
     setCaption("");
     if (fileRef.current) fileRef.current.value = "";
     setUploading(false);

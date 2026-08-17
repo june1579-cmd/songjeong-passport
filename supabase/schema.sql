@@ -473,3 +473,19 @@ language sql security definer set search_path = public as $$
   where name = p_name and phone4 = p_phone4
   limit 1;
 $$;
+
+-- =================================================================
+-- 확장 14: 사진 갤러리 업로드 안 되는 문제 — 버킷/정책 재확인 및 재생성
+-- =================================================================
+insert into storage.buckets (id, name, public)
+values ('gallery', 'gallery', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "public read gallery bucket" on storage.objects;
+create policy "public read gallery bucket" on storage.objects for select using (bucket_id = 'gallery');
+
+drop policy if exists "anon upload gallery bucket" on storage.objects;
+create policy "anon upload gallery bucket" on storage.objects for insert with check (bucket_id = 'gallery');
+
+drop policy if exists "admin write photos" on photos;
+create policy "admin write photos" on photos for insert with check (true);
