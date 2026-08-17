@@ -94,7 +94,7 @@ export default function PassportPage() {
           <p className="text-xs mt-1 text-muted">신청할 때 입력한 이름과 번호 뒤 4자리를 입력해주세요.</p>
         </div>
         <div className="space-y-3 max-w-sm mx-auto">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름 또는 닉네임" className="w-full border border-line rounded-lg px-3 py-2.5 text-sm" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="실명" className="w-full border border-line rounded-lg px-3 py-2.5 text-sm" />
           <input
             value={phone4}
             onChange={(e) => setPhone4(e.target.value.replace(/\D/g, "").slice(0, 4))}

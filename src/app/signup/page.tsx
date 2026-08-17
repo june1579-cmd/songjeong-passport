@@ -12,6 +12,17 @@ import ChipSelect from "@/components/ChipSelect";
 
 type Step = "consent" | "phone" | "code" | "details";
 
+// 실명 형식 가벼운 검증 — 한글 2~5자 또는 영문 이름(공백 포함 2~30자). 숫자·기호·이모지는 허용하지 않는다.
+// 주의: 이건 "실제로 그 사람이 맞는지"를 확인하는 신분증 대조 인증은 아니고, 닉네임/숫자조합 등 형식적으로
+// 실명이 아닌 입력을 걸러내는 수준이다. 진짜 본인인증은 PASS·NICE 같은 유료 인증 서비스 계약이 필요하다.
+function isValidName(value: string): boolean {
+  const v = value.trim();
+  if (!v) return false;
+  const korean = /^[가-힣]{2,5}$/;
+  const english = /^[A-Za-z][A-Za-z\s]{1,29}$/;
+  return korean.test(v) || english.test(v);
+}
+
 function SignupInner() {
   const router = useRouter();
   const params = useSearchParams();
@@ -54,7 +65,7 @@ function SignupInner() {
     setStep("details");
   };
 
-  const canSubmit = name.trim() && ageGroup && residenceDistrict && residenceDong.trim();
+  const canSubmit = isValidName(name) && ageGroup && residenceDistrict && residenceDong.trim();
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -121,7 +132,7 @@ function SignupInner() {
           </div>
           <div className="rounded-xl border border-line p-3 bg-white text-xs leading-relaxed text-ink space-y-1">
             <p className="font-medium">수집 항목</p>
-            <p className="text-muted">이름(닉네임), 휴대폰 번호, 연령대, 거주지역</p>
+            <p className="text-muted">실명, 휴대폰 번호, 연령대, 거주지역</p>
             <p className="font-medium mt-2">수집 목적</p>
             <p className="text-muted">본인 확인, 프로그램 신청·출석 확인, 활동 기록(패스포트) 제공, 통계 목적의 운영 분석</p>
             <p className="font-medium mt-2">보유 기간</p>
@@ -203,8 +214,12 @@ function SignupInner() {
         <div className="p-4 space-y-4">
           <div className="flex items-center gap-1.5 text-xs font-medium text-seafoam"><CheckCircle2 size={14} /> 휴대폰 인증 완료</div>
           <div>
-            <label className="text-xs font-medium block mb-1.5 text-muted">이름 또는 닉네임</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 송정 김주민" className="w-full border border-line rounded-lg px-3 py-2.5 text-sm" />
+            <label className="text-xs font-medium block mb-1.5 text-muted">실명</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 김주민" className="w-full border border-line rounded-lg px-3 py-2.5 text-sm" />
+            <p className="text-[11px] text-muted mt-1">실제 신분증에 적힌 이름을 정확히 입력해주세요. 닉네임은 사용할 수 없어요.</p>
+            {name.trim() && !isValidName(name) && (
+              <p className="text-[11px] text-coralDark mt-1">한글 또는 영문 실명만 입력할 수 있어요 (숫자·기호·이모지 불가).</p>
+            )}
           </div>
           <div>
             <label className="text-xs font-medium block mb-1.5 text-muted">연령대</label>
