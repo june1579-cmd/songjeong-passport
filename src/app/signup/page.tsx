@@ -6,7 +6,7 @@ import { ShieldCheck, CheckCircle2, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { requestVerificationCode, verifyCode } from "@/lib/otp";
 import { setStoredParticipantId } from "@/lib/participant-session";
-import { AGE_OPTIONS, RESIDENCE_OPTIONS } from "@/lib/types";
+import { AGE_OPTIONS, BUSAN_DISTRICTS } from "@/lib/types";
 import TopBar from "@/components/TopBar";
 import ChipSelect from "@/components/ChipSelect";
 
@@ -31,7 +31,8 @@ function SignupInner() {
 
   const [name, setName] = useState("");
   const [ageGroup, setAgeGroup] = useState("");
-  const [residence, setResidence] = useState("");
+  const [residenceDistrict, setResidenceDistrict] = useState("");
+  const [residenceDong, setResidenceDong] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,7 +54,7 @@ function SignupInner() {
     setStep("details");
   };
 
-  const canSubmit = name.trim() && ageGroup && residence;
+  const canSubmit = name.trim() && ageGroup && residenceDistrict && residenceDong.trim();
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -74,7 +75,9 @@ function SignupInner() {
       p_phone4: phone4,
       p_phone_number: phoneRaw,
       p_age_group: ageGroup,
-      p_residence_area: residence,
+      p_residence_area: `${residenceDistrict} ${residenceDong.trim()}`,
+      p_residence_district: residenceDistrict,
+      p_residence_dong: residenceDong.trim(),
     });
     if (insertErr || !newId) { setError("가입 처리 중 문제가 발생했습니다. 다시 시도해주세요."); setSaving(false); return; }
 
@@ -193,8 +196,17 @@ function SignupInner() {
             <ChipSelect options={AGE_OPTIONS} value={ageGroup} onChange={setAgeGroup} />
           </div>
           <div>
-            <label className="text-xs font-medium block mb-1.5 text-muted">거주지역</label>
-            <ChipSelect options={RESIDENCE_OPTIONS} value={residence} onChange={setResidence} />
+            <label className="text-xs font-medium block mb-1.5 text-muted">거주 구/군</label>
+            <ChipSelect options={BUSAN_DISTRICTS} value={residenceDistrict} onChange={setResidenceDistrict} />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5 text-muted">거주 동/읍/면</label>
+            <input
+              value={residenceDong}
+              onChange={(e) => setResidenceDong(e.target.value)}
+              placeholder="예: 송정동"
+              className="w-full border border-line rounded-lg px-3 py-2.5 text-sm"
+            />
           </div>
           {error && <p className="text-xs text-coralDark">{error}</p>}
           <button disabled={!canSubmit || saving} onClick={submit} className="w-full py-3.5 rounded-xl font-display text-white text-base bg-coral disabled:opacity-40">

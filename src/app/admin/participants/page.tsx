@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Search, Archive, ArchiveRestore, Trash2, Save, AlertTriangle } from "lucide-react";
-import { Participant, AGE_OPTIONS, RESIDENCE_OPTIONS } from "@/lib/types";
+import { Participant, AGE_OPTIONS, BUSAN_DISTRICTS, APPLICATION_STATUS_LABEL, ApplicationStatus } from "@/lib/types";
+import Pill from "@/components/Pill";
+
+interface ParticipantWithPrograms extends Participant {
+  programs: { id: string; emoji: string | null; title: string; status: ApplicationStatus }[];
+}
 
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...options?.headers } });
@@ -10,11 +15,11 @@ async function api(path: string, options?: RequestInit) {
 }
 
 export default function AdminParticipantsPage() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<ParticipantWithPrograms[]>([]);
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ name: string; age_group: string; residence_area: string } | null>(null);
+  const [editDraft, setEditDraft] = useState<{ name: string; age_group: string; residence_district: string; residence_dong: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -33,7 +38,8 @@ export default function AdminParticipantsPage() {
   const filtered = participants.filter((p) => {
     if (p.is_archived !== showArchived) return false;
     if (!query.trim()) return true;
-    return p.name.includes(query) || p.phone4.includes(query) || (p.phone_number ?? "").includes(query);
+    const addr = `${p.residence_district ?? ""} ${p.residence_dong ?? ""} ${p.residence_area ?? ""}`;
+    return p.name.includes(query) || p.phone4.includes(query) || (p.phone_number ?? "").includes(query) || addr.includes(query);
   });
 
   const toggleOne = (id: string) => {
@@ -46,14 +52,26 @@ export default function AdminParticipantsPage() {
     else setSelectedIds(new Set(filtered.map((p) => p.id)));
   };
 
-  const startEdit = (p: Participant) => {
+  const startEdit = (p: ParticipantWithPrograms) => {
     setEditingId(p.id);
-    setEditDraft({ name: p.name, age_group: p.age_group, residence_area: p.residence_area });
+    setEditDraft({ name: p.name, age_group: p.age_group, residence_district: p.residence_district ?? "", residence_dong: p.residence_dong ?? "" });
   };
 
   const saveEdit = async (id: string) => {
     if (!editDraft) return;
-    await api("/api/admin/participants", { method: "PATCH", body: JSON.stringify({ id, patch: editDraft }) });
+    await api("/api/admin/participants", {
+      method: "PATCH",
+      body: JSON.stringify({
+        id,
+        patch: {
+          name: editDraft.name,
+          age_group: editDraft.age_group,
+          residence_district: editDraft.residence_district,
+          residence_dong: editDraft.residence_dong,
+          residence_area: `${editDraft.residence_district} ${editDraft.residence_dong}`.trim(),
+        },
+      }),
+    });
     setEditingId(null);
     setEditDraft(null);
     load();
@@ -82,7 +100,7 @@ export default function AdminParticipantsPage() {
   return (
     <div className="p-4 pb-16">
       <h1 className="font-display text-lg text-navy mb-1">참여자 명단 관리</h1>
-      <p className="text-xs text-muted mb-4">이름/전화번호로 검색, 정보 수정, 보관(비활성화), 개별·일괄 삭제가 가능합니다.</p>
+      <p className="text-xs text-muted mb-4">이름/전화번호/지역으로 검색, 정보 수정, 보관, 개별·일괄 삭제가 가능합니다. 각 참여자가 신청한 프로그램도 함께 보여요.</p>
       {error && <p className="text-xs text-coralDark mb-2">{error}</p>}
 
       <div className="flex gap-2 mb-3">
@@ -91,7 +109,7 @@ export default function AdminParticipantsPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="이름 또는 전화번호"
+            placeholder="이름 / 전화번호 / 지역"
             className="flex-1 text-sm outline-none"
           />
         </div>
@@ -131,9 +149,16 @@ export default function AdminParticipantsPage() {
                   <select value={editDraft.age_group} onChange={(e) => setEditDraft({ ...editDraft, age_group: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
                     {AGE_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
                   </select>
-                  <select value={editDraft.residence_area} onChange={(e) => setEditDraft({ ...editDraft, residence_area: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
-                    {RESIDENCE_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+                  <select value={editDraft.residence_district} onChange={(e) => setEditDraft({ ...editDraft, residence_district: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
+                    <option value="">구/군 선택</option>
+                    {BUSAN_DISTRICTS.map((a) => <option key={a} value={a}>{a}</option>)}
                   </select>
+                  <input
+                    value={editDraft.residence_dong}
+                    onChange={(e) => setEditDraft({ ...editDraft, residence_dong: e.target.value })}
+                    placeholder="동/읍/면"
+                    className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs"
+                  />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => saveEdit(p.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-coral text-white text-xs font-medium">
@@ -154,11 +179,21 @@ export default function AdminParticipantsPage() {
                     <span style={{ fontVariantNumeric: "tabular-nums" }}>{p.phone_number ?? `****-****-${p.phone4}`}</span>
                     <span className="text-muted/70">연령대</span>
                     <span>{p.age_group}</span>
-                    <span className="text-muted/70">거주지역</span>
-                    <span>{p.residence_area}</span>
+                    <span className="text-muted/70">거주지</span>
+                    <span>{p.residence_district ? `${p.residence_district} ${p.residence_dong ?? ""}` : p.residence_area}</span>
                   </div>
+                  {p.programs.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {p.programs.map((prog) => (
+                        <Pill key={prog.id} tone={prog.status === "selected" ? "seafoam" : prog.status === "waitlisted" ? "coral" : "sand"}>
+                          {prog.emoji} {prog.title} · {APPLICATION_STATUS_LABEL[prog.status]}
+                        </Pill>
+                      ))}
+                    </div>
+                  )}
+                  {p.programs.length === 0 && <p className="text-[11px] text-muted/60 mt-1.5">신청한 프로그램 없음</p>}
                 </div>
-                <div className="flex gap-1.5 flex-shrink-0 self-start">
+                <div className="flex flex-col gap-1.5 flex-shrink-0 self-start">
                   <button onClick={() => startEdit(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy">수정</button>
                   <button onClick={() => toggleArchive(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy flex items-center gap-1">
                     {p.is_archived ? <><ArchiveRestore size={12} /> 복원</> : <><Archive size={12} /> 보관</>}

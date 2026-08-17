@@ -62,6 +62,8 @@ export interface Participant {
   phone_number: string | null;
   age_group: string;
   residence_area: string;
+  residence_district: string | null;
+  residence_dong: string | null;
   privacy_consent_at: string | null;
   is_archived: boolean;
   created_at: string;
@@ -171,6 +173,10 @@ export interface ProgramMessage {
 
 export const AGE_OPTIONS = ["10대", "20대", "30대", "40대", "50대", "60대 이상"];
 export const RESIDENCE_OPTIONS = ["송정동", "해운대구 다른 지역", "부산 다른 지역", "기타"];
+export const BUSAN_DISTRICTS = [
+  "해운대구", "부산진구", "동래구", "수영구", "남구", "연제구", "금정구",
+  "북구", "사상구", "사하구", "강서구", "중구", "서구", "동구", "영도구", "기장군", "타지역",
+];
 export const CHANNEL_OPTIONS = ["동주민센터", "기존 프로그램", "지인 추천", "카카오톡", "SNS", "현수막/포스터", "기타"];
 export const INTEREST_OPTIONS = ["서핑", "해양스포츠", "환경", "미술", "공예", "사진", "지역문화", "기타"];
 export const REVISIT_OPTIONS = ["꼭 참여하고 싶어요", "관심 있어요", "잘 모르겠어요", "참여하지 않을 것 같아요"];

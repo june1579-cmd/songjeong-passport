@@ -8,9 +8,19 @@ import Pill from "@/components/Pill";
 
 export default function AdminProgramsPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [counts, setCounts] = useState<Record<string, { applied: number; selected: number }>>({});
 
   const load = () => {
     supabase.from("programs").select("*").order("created_at").then(({ data }) => setPrograms(data ?? []));
+    supabase.from("registrations").select("program_id, status").then(({ data }) => {
+      const map: Record<string, { applied: number; selected: number }> = {};
+      (data ?? []).forEach((r) => {
+        map[r.program_id] = map[r.program_id] ?? { applied: 0, selected: 0 };
+        if (r.status !== "cancelled" && r.status !== "rejected") map[r.program_id].applied += 1;
+        if (r.status === "selected") map[r.program_id].selected += 1;
+      });
+      setCounts(map);
+    });
   };
   useEffect(load, []);
 
@@ -38,6 +48,9 @@ export default function AdminProgramsPage() {
             <Pill tone={p.is_published ? "seafoam" : "sand"}>{PROGRAM_STATUS_LABEL[p.program_status] ?? (p.is_published ? "게시중" : "비공개")}</Pill>
           </div>
           <p className="text-xs text-muted line-clamp-2">{p.description}</p>
+          <p className="text-[11px] text-navy font-medium">
+            신청 {counts[p.id]?.applied ?? 0}명 · 선정 {counts[p.id]?.selected ?? 0}명
+          </p>
           <div className="flex gap-2 pt-1">
             <Link href={`/admin/programs/${p.id}/applications`} className="flex-1 flex items-center justify-center gap-1 text-xs font-medium py-2 rounded-lg border border-line text-navy">
               <Users size={13} /> 신청자

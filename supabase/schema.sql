@@ -431,3 +431,45 @@ create policy "anon insert program_messages" on program_messages for insert with
 
 -- 실시간 기능(Realtime)을 이 테이블에 활성화 (메시지가 즉시 다른 참여자 화면에 뜨도록)
 alter publication supabase_realtime add table program_messages;
+
+-- =================================================================
+-- 확장 13: 거주지 상세화(구/군 + 동/읍/면), 회원가입 인적사항 반영
+-- =================================================================
+alter table participants add column if not exists residence_district text; -- 구/군 (예: 해운대구)
+alter table participants add column if not exists residence_dong text;     -- 동/읍/면 (예: 송정동)
+
+-- 회원가입 시 상세 주소를 받도록 RPC 함수 확장 (기존 호출과의 호환을 위해 새 파라미터는 끝에 옵션으로 추가)
+create or replace function rpc_create_participant(
+  p_name text, p_phone4 text, p_phone_number text, p_age_group text, p_residence_area text,
+  p_residence_district text default null, p_residence_dong text default null
+)
+returns uuid
+language sql security definer set search_path = public as $$
+  insert into participants (name, phone4, phone_number, age_group, residence_area, residence_district, residence_dong, privacy_consent_at)
+  values (p_name, p_phone4, p_phone_number, p_age_group, p_residence_area, p_residence_district, p_residence_dong, now())
+  returning id;
+$$;
+grant execute on function rpc_create_participant(text, text, text, text, text, text, text) to anon;
+
+create or replace function rpc_get_my_participant(p_id uuid)
+returns table (
+  id uuid, name text, age_group text, residence_area text, phone_number text, phone4 text,
+  privacy_consent_at timestamptz, is_archived boolean, created_at timestamptz,
+  residence_district text, residence_dong text
+)
+language sql security definer set search_path = public as $$
+  select id, name, age_group, residence_area, phone_number, phone4, privacy_consent_at, is_archived, created_at,
+         residence_district, residence_dong
+  from participants
+  where id = p_id
+  limit 1;
+$$;
+
+create or replace function rpc_find_participant(p_name text, p_phone4 text)
+returns table (id uuid, name text, age_group text, residence_area text, phone_number text, residence_district text, residence_dong text)
+language sql security definer set search_path = public as $$
+  select id, name, age_group, residence_area, phone_number, residence_district, residence_dong
+  from participants
+  where name = p_name and phone4 = p_phone4
+  limit 1;
+$$;

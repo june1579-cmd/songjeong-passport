@@ -96,7 +96,7 @@ export default function ApplicationsPage() {
       r.participant.name,
       r.participant.phone_number ?? `****-****-${r.participant.phone4}`,
       r.participant.age_group,
-      r.participant.residence_area,
+      (r.participant.residence_district ? `${r.participant.residence_district} ${r.participant.residence_dong ?? ""}` : r.participant.residence_area),
       r.registration.acquisition_channel,
       new Date(r.registration.registered_at).toLocaleDateString("ko-KR"),
       String(r.priorVisits),
@@ -225,8 +225,8 @@ export default function ApplicationsPage() {
                     {r.participant.phone_number ?? `****-****-${r.participant.phone4}`}
                   </td>
                   <td className="p-2.5 align-middle text-muted whitespace-nowrap">{r.participant.age_group}</td>
-                  <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.participant.residence_area}>
-                    {r.participant.residence_area}
+                  <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.participant.residence_district ? `${r.participant.residence_district} ${r.participant.residence_dong ?? ""}` : r.participant.residence_area}>
+                    {r.participant.residence_district ? `${r.participant.residence_district} ${r.participant.residence_dong ?? ""}` : r.participant.residence_area}
                   </td>
                   <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.registration.acquisition_channel}>
                     {r.registration.acquisition_channel}
