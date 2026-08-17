@@ -13,6 +13,7 @@ import Pill from "@/components/Pill";
 import StatusBadge from "@/components/StatusBadge";
 import CategoryPill from "@/components/CategoryPill";
 import ReviewModal from "@/components/ReviewModal";
+import Lightbox from "@/components/Lightbox";
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | null }) {
   if (!value) return null;
@@ -40,6 +41,7 @@ export default function ProgramDetailPage() {
   const [totalRegCount, setTotalRegCount] = useState(0);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const load = async () => {
     const { data: prog } = await supabase.from("programs").select("*").eq("id", id).single();
@@ -183,10 +185,10 @@ export default function ProgramDetailPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {photos.map((ph) => (
-                <div key={ph.id}>
+                <button key={ph.id} onClick={() => setLightboxSrc(ph.image_url)} className="text-left">
                   <img src={ph.image_url} alt={ph.caption ?? ""} className="w-full h-28 object-cover rounded-lg border border-line" />
                   {ph.caption && <p className="text-[10px] text-muted mt-1 truncate">{ph.caption}</p>}
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -219,7 +221,11 @@ export default function ProgramDetailPage() {
                     )}
                   </div>
                   {r.content && <p className="text-xs text-muted leading-relaxed mb-2">{r.content}</p>}
-                  {r.image_url && <img src={r.image_url} alt="" className="w-full h-40 object-cover rounded-lg border border-line" />}
+                  {r.image_url && (
+                    <button onClick={() => setLightboxSrc(r.image_url)} className="block w-full">
+                      <img src={r.image_url} alt="" className="w-full h-40 object-cover rounded-lg border border-line" />
+                    </button>
+                  )}
                 </div>
               ))}
               {reviews.length === 0 && <p className="text-xs text-muted px-1">아직 후기가 없어요. 첫 후기를 남겨보세요!</p>}
@@ -321,6 +327,7 @@ export default function ProgramDetailPage() {
           onSubmitted={load}
         />
       )}
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </div>
   );
 }

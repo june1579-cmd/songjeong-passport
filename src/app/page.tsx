@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone, Pin } from "lucide-react";
+import Link from "next/link";
+import { Megaphone, Pin, Images } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
 import { Program, Session, Registration, Attendance, Participant, Announcement, Photo, PROGRAM_CATEGORIES } from "@/lib/types";
@@ -162,6 +163,9 @@ export default function HomePage() {
         <div className="px-4 mt-5">
           <p className="text-sm font-medium px-1 mb-2 text-muted">진행되는 프로그램 현장</p>
           <PhotoSlideshow photos={slidePhotos} programMap={programMap} />
+          <Link href="/gallery" className="flex items-center justify-center gap-1 mt-2 text-xs font-medium text-navy py-2 rounded-lg border border-line bg-white">
+            <Images size={14} /> 프로그램별 갤러리 전체보기
+          </Link>
         </div>
       )}
 

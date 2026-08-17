@@ -594,3 +594,8 @@ grant execute on function rpc_create_registration(uuid, text, text) to anon;
 -- 이미 중복 데이터가 있으면 이 제약 추가가 실패할 수 있으니, 먼저 아래 조회로 확인 후 진행 권장:
 --   select phone_number, count(*) from participants where phone_number is not null group by phone_number having count(*) > 1;
 alter table participants add constraint participants_phone_number_key unique (phone_number);
+
+-- =================================================================
+-- 확장 18: 참여자 대화방 사진 첨부
+-- =================================================================
+alter table program_messages add column if not exists image_url text;
