@@ -489,3 +489,100 @@ create policy "anon upload gallery bucket" on storage.objects for insert with ch
 
 drop policy if exists "admin write photos" on photos;
 create policy "admin write photos" on photos for insert with check (true);
+
+-- =================================================================
+-- 확장 15: registrations/attendance/consents 익명 전체 조회 차단
+-- =================================================================
+-- INSERT 정책(신청/체크인/동의 기록 생성)은 그대로 유지 — 문제는 "전체 조회"였다.
+drop policy if exists "anon read registrations" on registrations;
+drop policy if exists "anon read attendance" on attendance;
+drop policy if exists "anon read consents" on consents;
+
+-- 공개 집계(정원 표시용) — 개인 식별 정보 없이 프로그램별/회차별 신청·출석 인원수만 반환
+create or replace function rpc_program_registration_counts()
+returns table (program_id text, active_count bigint, selected_count bigint)
+language sql security definer set search_path = public as $$
+  select program_id,
+         count(*) filter (where status not in ('cancelled', 'rejected')) as active_count,
+         count(*) filter (where status = 'selected') as selected_count
+  from registrations
+  group by program_id;
+$$;
+grant execute on function rpc_program_registration_counts() to anon;
+
+create or replace function rpc_session_attendance_counts(p_program_id text)
+returns table (session_id uuid, cnt bigint)
+language sql security definer set search_path = public as $$
+  select session_id, count(*) from attendance where program_id = p_program_id group by session_id;
+$$;
+grant execute on function rpc_session_attendance_counts(text) to anon;
+
+-- 본인 참여자 ID(추측 불가능한 UUID)로만 조회 가능한 함수들
+create or replace function rpc_get_my_registrations(p_participant_id uuid)
+returns setof registrations
+language sql security definer set search_path = public as $$
+  select * from registrations where participant_id = p_participant_id;
+$$;
+grant execute on function rpc_get_my_registrations(uuid) to anon;
+
+create or replace function rpc_get_my_registration_for_program(p_participant_id uuid, p_program_id text)
+returns setof registrations
+language sql security definer set search_path = public as $$
+  select * from registrations where participant_id = p_participant_id and program_id = p_program_id limit 1;
+$$;
+grant execute on function rpc_get_my_registration_for_program(uuid, text) to anon;
+
+create or replace function rpc_get_my_attendance(p_participant_id uuid)
+returns setof attendance
+language sql security definer set search_path = public as $$
+  select * from attendance where participant_id = p_participant_id order by checked_in_at asc;
+$$;
+grant execute on function rpc_get_my_attendance(uuid) to anon;
+
+create or replace function rpc_get_my_attendance_for_program(p_participant_id uuid, p_program_id text)
+returns setof attendance
+language sql security definer set search_path = public as $$
+  select * from attendance where participant_id = p_participant_id and program_id = p_program_id;
+$$;
+grant execute on function rpc_get_my_attendance_for_program(uuid, text) to anon;
+
+create or replace function rpc_check_attendance(p_participant_id uuid, p_session_id uuid)
+returns setof attendance
+language sql security definer set search_path = public as $$
+  select * from attendance where participant_id = p_participant_id and session_id = p_session_id limit 1;
+$$;
+grant execute on function rpc_check_attendance(uuid, uuid) to anon;
+
+create or replace function rpc_get_my_consent(p_participant_id uuid, p_consent_type text)
+returns boolean
+language sql security definer set search_path = public as $$
+  select agreed from consents
+  where participant_id = p_participant_id and consent_type = p_consent_type
+  order by agreed_at desc limit 1;
+$$;
+grant execute on function rpc_get_my_consent(uuid, text) to anon;
+
+-- =================================================================
+-- 확장 16: 신청 생성 시 방금 만든 행을 돌려받으려면 select 권한이 필요한데,
+-- 익명 select를 막았으므로 생성+반환을 함수 안에서 함께 처리한다.
+-- (participant_id, program_id) unique 제약이 있어 이미 신청한 경우 기존 행의 id를 그대로 반환한다.
+-- =================================================================
+create or replace function rpc_create_registration(p_participant_id uuid, p_program_id text, p_acquisition_channel text)
+returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  reg_id uuid;
+begin
+  insert into registrations (participant_id, program_id, acquisition_channel, status)
+  values (p_participant_id, p_program_id, p_acquisition_channel, 'applied')
+  on conflict (participant_id, program_id) do nothing
+  returning id into reg_id;
+
+  if reg_id is null then
+    select id into reg_id from registrations where participant_id = p_participant_id and program_id = p_program_id;
+  end if;
+
+  return reg_id;
+end;
+$$;
+grant execute on function rpc_create_registration(uuid, text, text) to anon;

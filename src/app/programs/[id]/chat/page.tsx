@@ -35,12 +35,8 @@ export default function ProgramChatPage() {
       setMe(participant);
       if (participant) {
         supabase
-          .from("registrations")
-          .select("*")
-          .eq("participant_id", participant.id)
-          .eq("program_id", id)
-          .maybeSingle()
-          .then(({ data: reg }) => setRegistration(reg ?? null));
+          .rpc("rpc_get_my_registration_for_program", { p_participant_id: participant.id, p_program_id: id })
+          .then(({ data: regs }) => setRegistration((regs as Registration[] | null)?.[0] ?? null));
       } else {
         setRegistration(null);
       }

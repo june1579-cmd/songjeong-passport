@@ -24,7 +24,7 @@ export async function promoteNextWaitlisted(client: SupabaseClient, programId: s
   const { data: participant } = await client.from("participants").select("name, phone_number").eq("id", (nextInLine as Registration).participant_id).single();
   const { data: program } = await client.from("programs").select("title").eq("id", programId).single();
 
-  const message = `[Experience Passport] ${participant?.name ?? ""}님, '${program?.title ?? ""}' 프로그램에 자리가 생겨 선정되셨습니다. 참여를 원하시면 사이트에서 확인해주세요.`;
+  const message = `[PassUp] ${participant?.name ?? ""}님, '${program?.title ?? ""}' 프로그램에 자리가 생겨 선정되셨습니다. 참여를 원하시면 사이트에서 확인해주세요.`;
 
   const aligoKey = process.env.ALIGO_API_KEY;
   const aligoUserId = process.env.ALIGO_USER_ID;

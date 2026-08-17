@@ -20,7 +20,7 @@ export default function PassportSummaryCard({
             <Stamp size={18} className="text-navy" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-ink">Experience Passport 회원가입</p>
+            <p className="text-sm font-medium text-ink">PassUp 회원가입</p>
             <p className="text-xs text-muted mt-0.5">가입하면 프로그램에 참여하면서 나만의 평생학습 기록이 만들어져요.</p>
           </div>
           <ArrowRight size={16} className="text-muted flex-shrink-0" />

@@ -66,7 +66,7 @@ export default function SurveyPage() {
             </button>
           </>
         ) : (
-          <p className="text-sm text-muted">Experience Passport의 모든 여정을 완주하셨습니다. 🎉</p>
+          <p className="text-sm text-muted">PassUp의 모든 여정을 완주하셨습니다. 🎉</p>
         )}
         <button onClick={() => router.push("/passport")} className="mt-8 text-sm font-medium text-navy">
           내 패스포트 보기 →

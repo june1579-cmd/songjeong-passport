@@ -47,13 +47,14 @@ export default function ProgramDetailPage() {
     const { data: sess } = await supabase.from("sessions").select("*").eq("program_id", id).order("session_date");
     setSessions(sess ?? []);
 
-    const { data: allAttendance } = await supabase.from("attendance").select("session_id").eq("program_id", id);
+    const { data: allAttendance } = await supabase.rpc("rpc_session_attendance_counts", { p_program_id: id });
     const counts: Record<string, number> = {};
-    (allAttendance ?? []).forEach((a: { session_id: string }) => { counts[a.session_id] = (counts[a.session_id] ?? 0) + 1; });
+    (allAttendance ?? []).forEach((a: { session_id: string; cnt: number }) => { counts[a.session_id] = a.cnt; });
     setSessionCounts(counts);
 
-    const { data: regs } = await supabase.from("registrations").select("status").eq("program_id", id);
-    setTotalRegCount((regs ?? []).filter((r) => r.status !== "cancelled" && r.status !== "rejected").length);
+    const { data: regCounts } = await supabase.rpc("rpc_program_registration_counts");
+    const activeCount = (regCounts ?? []).find((r: { program_id: string; active_count: number }) => r.program_id === id)?.active_count ?? 0;
+    setTotalRegCount(activeCount);
 
     const { data: ph } = await supabase
       .from("photos")
@@ -72,14 +73,9 @@ export default function ProgramDetailPage() {
       const participant = participantRaw as Participant | null;
       setMe(participant);
       if (participant) {
-        const { data: reg } = await supabase
-          .from("registrations")
-          .select("*")
-          .eq("participant_id", participant.id)
-          .eq("program_id", id)
-          .maybeSingle();
-        setRegistration(reg);
-        const { data: att } = await supabase.from("attendance").select("*").eq("participant_id", participant.id).eq("program_id", id);
+        const { data: regs } = await supabase.rpc("rpc_get_my_registration_for_program", { p_participant_id: participant.id, p_program_id: id });
+        setRegistration(regs?.[0] ?? null);
+        const { data: att } = await supabase.rpc("rpc_get_my_attendance_for_program", { p_participant_id: participant.id, p_program_id: id });
         setAttendance(att ?? []);
       }
     }

@@ -33,6 +33,8 @@ export default function ApplicationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | ApplicationStatus>("all");
   const [notifications, setNotifications] = useState<(Notification & { participant_name: string })[]>([]);
+  const [attendanceData, setAttendanceData] = useState<{ participant_id: string; session_id: string; checked_in_at: string }[]>([]);
+  const [sessionsData, setSessionsData] = useState<{ id: string; session_label: string; session_date: string }[]>([]);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -40,7 +42,7 @@ export default function ApplicationsPage() {
     setProgram(prog);
 
     try {
-      const { registrations, participants, priorVisitsMap, notifications: notifs } = await api(`/api/admin/applications/${id}`);
+      const { registrations, participants, priorVisitsMap, notifications: notifs, attendance, sessions } = await api(`/api/admin/applications/${id}`);
       const list: Row[] = (registrations ?? [])
         .map((r: Registration) => {
           const participant = (participants ?? []).find((p: Participant) => p.id === r.participant_id);
@@ -50,6 +52,8 @@ export default function ApplicationsPage() {
         .filter(Boolean) as Row[];
       setRows(list);
       setNotifications(notifs ?? []);
+      setAttendanceData(attendance ?? []);
+      setSessionsData(sessions ?? []);
     } catch (e: any) {
       setError(e.message ?? "불러오기에 실패했습니다.");
     }
@@ -110,19 +114,14 @@ export default function ApplicationsPage() {
     link.click();
   };
 
-  const downloadAttendanceCsv = async () => {
-    const { data: attendance } = await supabase
-      .from("attendance")
-      .select("participant_id, session_id, checked_in_at")
-      .eq("program_id", id);
-    if (!attendance?.length) { window.alert("출석 기록이 없습니다."); return; }
+  const downloadAttendanceCsv = () => {
+    if (!attendanceData.length) { window.alert("출석 기록이 없습니다."); return; }
 
-    const { data: sessions } = await supabase.from("sessions").select("id, session_label, session_date").eq("program_id", id);
     const sessionMap: Record<string, { session_label: string; session_date: string }> = {};
-    (sessions ?? []).forEach((s) => (sessionMap[s.id] = s));
+    sessionsData.forEach((s) => (sessionMap[s.id] = s));
 
     const header = ["이름", "전화번호", "회차", "회차일자", "체크인 시각"];
-    const lines = attendance.map((a) => {
+    const lines = attendanceData.map((a) => {
       const p = rows.find((r) => r.participant.id === a.participant_id)?.participant;
       const s = sessionMap[a.session_id];
       return [

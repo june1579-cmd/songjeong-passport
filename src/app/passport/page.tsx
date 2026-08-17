@@ -26,9 +26,9 @@ export default function PassportPage() {
 
   const loadPassport = async (participant: Participant) => {
     setMe(participant);
-    const { data: att } = await supabase.from("attendance").select("*").eq("participant_id", participant.id).order("checked_in_at", { ascending: true });
+    const { data: att } = await supabase.rpc("rpc_get_my_attendance", { p_participant_id: participant.id });
     setAttendance(att ?? []);
-    const { data: regs } = await supabase.from("registrations").select("*").eq("participant_id", participant.id);
+    const { data: regs } = await supabase.rpc("rpc_get_my_registrations", { p_participant_id: participant.id });
     setRegistrations(regs ?? []);
     const { data: progs } = await supabase.from("programs").select("*");
     setPrograms(progs ?? []);
@@ -155,7 +155,7 @@ export default function PassportPage() {
   return (
     <div className="pb-24 min-h-screen">
       <div className="px-5 pt-8 pb-6 text-white" style={{ background: "linear-gradient(150deg, #0D3B4E 0%, #2E8FC0 40%, #3F9179 75%, #9C6FCB 130%)" }}>
-        <p className="text-xs text-white/70">나의 Experience Passport</p>
+        <p className="text-xs text-white/70">나의 PassUp</p>
         <h2 className="font-display text-xl mt-1">{me.name}님</h2>
         <div className="flex gap-5 mt-4">
           <div><div className="font-display text-lg">{myPrograms.size}개</div><div className="text-[11px] text-white/70">활동 경험</div></div>

@@ -25,14 +25,8 @@ export default function ReviewModal({
 
   useEffect(() => {
     supabase
-      .from("consents")
-      .select("agreed")
-      .eq("participant_id", me.id)
-      .eq("consent_type", "media_optional")
-      .order("agreed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setHasMediaConsent(data?.agreed ?? false));
+      .rpc("rpc_get_my_consent", { p_participant_id: me.id, p_consent_type: "media_optional" })
+      .then(({ data }) => setHasMediaConsent(data ?? false));
   }, [me.id]);
 
   const needsMediaConsent = !!file && hasMediaConsent === false;

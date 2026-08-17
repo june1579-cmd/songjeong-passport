@@ -1,4 +1,4 @@
-// "Experience Passport" 브랜드 마크 — 여권/스탬프를 은유한 심볼.
+// "PassUp" 브랜드 마크 — 여권/스탬프를 은유한 심볼.
 export default function PassportMark({ size = 28, className = "" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" className={className}>

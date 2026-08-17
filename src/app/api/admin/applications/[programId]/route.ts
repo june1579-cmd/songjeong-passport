@@ -33,7 +33,10 @@ export async function GET(req: NextRequest, { params }: { params: { programId: s
     notifications = notifs.map((n) => ({ ...n, participant_name: p2?.find((p) => p.id === n.participant_id)?.name ?? "" }));
   }
 
-  return NextResponse.json({ registrations: regs ?? [], participants, priorVisitsMap, notifications });
+  const { data: programAttendance } = await admin.from("attendance").select("participant_id, session_id, checked_in_at").eq("program_id", programId);
+  const { data: sessions } = await admin.from("sessions").select("id, session_label, session_date").eq("program_id", programId);
+
+  return NextResponse.json({ registrations: regs ?? [], participants, priorVisitsMap, notifications, attendance: programAttendance ?? [], sessions: sessions ?? [] });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { programId: string } }) {

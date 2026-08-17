@@ -44,23 +44,15 @@ export default function CheckinPage() {
       }
       setParticipantId(pid);
 
-      const { data: reg } = await supabase
-        .from("registrations")
-        .select("status")
-        .eq("participant_id", pid)
-        .eq("program_id", sess.program_id)
-        .maybeSingle();
+      const { data: regs } = await supabase.rpc("rpc_get_my_registration_for_program", { p_participant_id: pid, p_program_id: sess.program_id });
+      const reg = regs?.[0];
       if (!reg || reg.status === "rejected" || reg.status === "cancelled" || reg.status === "waitlisted") {
         setStatus("notselected");
         return;
       }
 
-      const { data: existing } = await supabase
-        .from("attendance")
-        .select("*")
-        .eq("participant_id", pid)
-        .eq("session_id", sess.id)
-        .maybeSingle();
+      const { data: existingRows } = await supabase.rpc("rpc_check_attendance", { p_participant_id: pid, p_session_id: sess.id });
+      const existing = existingRows?.[0];
       if (existing) setStatus("already");
 
       if (!existing) {
@@ -71,15 +63,13 @@ export default function CheckinPage() {
       }
 
       if (!existing && sess.capacity !== null) {
-        const { count: sessionCount } = await supabase
-          .from("attendance")
-          .select("*", { count: "exact", head: true })
-          .eq("session_id", sess.id);
-        if ((sessionCount ?? 0) >= sess.capacity) setStatus("full");
+        const { data: sessionCounts } = await supabase.rpc("rpc_session_attendance_counts", { p_program_id: sess.program_id });
+        const sessionCount = (sessionCounts ?? []).find((c: { session_id: string; cnt: number }) => c.session_id === sess.id)?.cnt ?? 0;
+        if (sessionCount >= sess.capacity) setStatus("full");
       }
 
-      const { count } = await supabase.from("attendance").select("*", { count: "exact", head: true }).eq("participant_id", pid);
-      setStampCount(count ?? 0);
+      const { data: myAtt } = await supabase.rpc("rpc_get_my_attendance", { p_participant_id: pid });
+      setStampCount((myAtt ?? []).length);
     })();
   }, [token]);
 

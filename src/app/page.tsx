@@ -27,7 +27,7 @@ const FILTERS = ["전체", "이번주", ...PROGRAM_CATEGORIES];
 export default function HomePage() {
   const [programs, setPrograms] = useState<Program[] | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({});
   const [me, setMe] = useState<Participant | null>(null);
   const [myRegs, setMyRegs] = useState<Registration[]>([]);
   const [myAttendance, setMyAttendance] = useState<Attendance[]>([]);
@@ -42,8 +42,10 @@ export default function HomePage() {
       setPrograms(progs ?? []);
       const { data: sess } = await supabase.from("sessions").select("*");
       setSessions(sess ?? []);
-      const { data: regs } = await supabase.from("registrations").select("*");
-      setRegistrations(regs ?? []);
+      const { data: regCounts } = await supabase.rpc("rpc_program_registration_counts");
+      const countMap: Record<string, number> = {};
+      (regCounts ?? []).forEach((r: { program_id: string; active_count: number }) => (countMap[r.program_id] = r.active_count));
+      setRegistrationCounts(countMap);
       const { data: ann } = await supabase
         .from("announcements")
         .select("*")
@@ -63,9 +65,9 @@ export default function HomePage() {
         const participant = participantRaw as Participant | null;
         setMe(participant);
         if (participant) {
-          const { data: mr } = await supabase.from("registrations").select("*").eq("participant_id", pid);
+          const { data: mr } = await supabase.rpc("rpc_get_my_registrations", { p_participant_id: pid });
           setMyRegs(mr ?? []);
-          const { data: ma } = await supabase.from("attendance").select("*").eq("participant_id", pid);
+          const { data: ma } = await supabase.rpc("rpc_get_my_attendance", { p_participant_id: pid });
           setMyAttendance(ma ?? []);
         }
       }
@@ -137,7 +139,7 @@ export default function HomePage() {
         </svg>
         <div className="flex items-center gap-1.5 mb-3">
           <PassportMark size={22} className="text-white" />
-          <span className="font-display text-sm tracking-wide">Experience Passport</span>
+          <span className="font-display text-sm tracking-wide">PassUp</span>
         </div>
         <h1 className="font-display text-2xl leading-tight mb-2">
           오늘의 경험이<br />다음으로 이어져요
@@ -212,11 +214,11 @@ export default function HomePage() {
         <p className="text-sm font-medium px-1 text-muted">참여할 수 있는 프로그램</p>
         {programs === null && <p className="text-xs text-muted px-1">불러오는 중...</p>}
         {filteredPrograms.map((p) => {
-          const progRegs = registrations.filter((r) => r.program_id === p.id && r.status !== "cancelled" && r.status !== "rejected");
+          const activeCount = registrationCounts[p.id] ?? 0;
           const totalCapacity = sessions.filter((s) => s.program_id === p.id).reduce((sum, s) => (s.capacity !== null ? sum + s.capacity : sum), 0) || p.capacity;
           const myReg = myRegs.find((r) => r.program_id === p.id);
           const myAttCount = myAttendance.filter((a) => a.program_id === p.id).length;
-          const status = computeCardStatus(p, totalCapacity ?? null, progRegs.length, myReg, myAttCount);
+          const status = computeCardStatus(p, totalCapacity ?? null, activeCount, myReg, myAttCount);
           return (
             <ProgramCard
               key={p.id}
@@ -224,7 +226,7 @@ export default function HomePage() {
               dateLabel={dateLabelFor(sessions, p.id)}
               status={status}
               totalCapacity={totalCapacity ?? null}
-              totalRegistrations={progRegs.length}
+              totalRegistrations={activeCount}
             />
           );
         })}

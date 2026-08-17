@@ -34,8 +34,9 @@ function JoinPageInner() {
       setSessionCounts(counts);
     });
     // 고정 기수제일 때 전체 신청 인원(취소/미선정 제외)을 확인
-    supabase.from("registrations").select("status").eq("program_id", programId).then(({ data }) => {
-      setCohortCount((data ?? []).filter((r) => r.status !== "cancelled" && r.status !== "rejected").length);
+    supabase.rpc("rpc_program_registration_counts").then(({ data }) => {
+      const row = (data ?? []).find((r: { program_id: string; active_count: number }) => r.program_id === programId);
+      setCohortCount(row?.active_count ?? 0);
     });
 
     const pid = getStoredParticipantId();
@@ -65,21 +66,16 @@ function JoinPageInner() {
     if (!canSubmit || !me || !program) return;
     setSaving(true);
     setError("");
-    const { data: regData, error: regErr } = await supabase
-      .from("registrations")
-      .insert({ participant_id: me.id, program_id: program.id, acquisition_channel: channel, status: "applied" })
-      .select()
-      .single();
+    const { data: registrationId, error: regErr } = await supabase.rpc("rpc_create_registration", {
+      p_participant_id: me.id,
+      p_program_id: program.id,
+      p_acquisition_channel: channel,
+    });
 
-    let registrationId = regData?.id as string | undefined;
-    if (regErr) {
-      if (!regErr.message.includes("duplicate")) {
-        setError("신청 처리 중 문제가 발생했습니다.");
-        setSaving(false);
-        return;
-      }
-      const { data: existing } = await supabase.from("registrations").select("id").eq("participant_id", me.id).eq("program_id", program.id).maybeSingle();
-      registrationId = existing?.id;
+    if (regErr || !registrationId) {
+      setError("신청 처리 중 문제가 발생했습니다.");
+      setSaving(false);
+      return;
     }
 
     if (registrationId) {

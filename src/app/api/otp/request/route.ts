@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       user_id: aligoUserId,
       sender: aligoSender,
       receiver: String(phoneNumber),
-      msg: `[Experience Passport] 인증번호는 ${code}입니다. 5분 이내에 입력해주세요.`,
+      msg: `[PassUp] 인증번호는 ${code}입니다. 5분 이내에 입력해주세요.`,
     });
     const res = await fetch("https://apis.aligo.in/send/", { method: "POST", body });
     const data = await res.json();

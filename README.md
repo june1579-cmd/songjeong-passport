@@ -1,4 +1,4 @@
-# Experience Passport (MVP)
+# PassUp (MVP)
 
 프로그램 발견 → 신청 → 참여 → 활동 기록 → 성과 → 다음 프로그램 추천 → 재참여로 이어지는
 송정동 평생학습 참여 흐름을 하나의 참여자 ID로 연결해 기록하는 웹 MVP.
@@ -197,3 +197,15 @@ ALIGO_SENDER=사전 등록한 발신번호 (하이픈 없이 숫자만, 예: 051
 3개 중 하나라도 비어있으면 자동으로 지금과 같은 데모 모드로 동작하므로, 승인 전에 미리 배포해도 안전하다.
 
 **참고**: 알리고는 발신번호를 미리 등록해야 문자를 보낼 수 있다(보이스피싱 방지 규제). 발신번호 등록이 안 된 상태에서 발송을 시도하면 `ALIGO_SENDER` 값이 있어도 발송 실패로 처리되어 "failed" 상태로 기록되니, 발신번호 등록이 끝난 뒤 환경변수를 넣을 것.
+
+## 15. 실사용 전환 (4) — registrations/attendance/consents 개인정보 보호 강화
+
+참여자(`participants`)와 프로그램(`programs`/`sessions`) 다음으로, 마지막 남은 낮은 우선순위 항목이었던 `registrations`(신청 내역), `attendance`(체크인 기록), `consents`(동의 이력) 테이블도 같은 방식으로 잠갔다.
+
+- 세 테이블의 "익명 전체 조회" RLS 정책을 제거했다.
+- 정원·현황 표시처럼 개인 식별 없이 필요한 공개 집계는 `rpc_program_registration_counts()`, `rpc_session_attendance_counts()`로 제공한다.
+- 로그인한 본인의 신청/출석 조회는 `rpc_get_my_registrations`, `rpc_get_my_registration_for_program`, `rpc_get_my_attendance`, `rpc_get_my_attendance_for_program`, `rpc_check_attendance`, `rpc_get_my_consent` 함수로만 가능하다(이미 알고 있는 자신의 UUID로만 조회).
+- 신청 생성은 `rpc_create_registration()` 함수로 처리한다(단, 체크인 시 출석 기록·동의 기록 등 "쓰기(INSERT)"는 원래도 넓게 열려 있었고 이번에 막은 건 "읽기(SELECT)"라서, 참여자 본인이 자기 신청서를 쓰는 것 자체는 그대로 가능하다).
+- 관리자 대시보드(`/admin`)와 신청자 관리의 출석기록 CSV는 이제 `/api/admin/dashboard`, `/api/admin/applications/[programId]` 서버 라우트(서비스 롤 키)를 통해서만 전체 데이터를 읽는다.
+
+이걸로 참여자 관련 테이블 전체(참여자 정보, 신청, 출석, 동의)가 "필요한 사람만 필요한 만큼" 조회 가능한 구조로 통일됐다.

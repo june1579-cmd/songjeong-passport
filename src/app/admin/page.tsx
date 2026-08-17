@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { BarChart3, ArrowRight, Users, Lightbulb } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { Program, Registration, Attendance, Survey } from "@/lib/types";
 import { computeKpis, computeConversion, computeSatisfaction, computeChannelBreakdown, generateInsights } from "@/lib/kpi";
 import KpiCard from "@/components/KpiCard";
@@ -16,23 +15,16 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: progs }, { data: regs }, { data: att }, { data: svs }] = await Promise.all([
-        supabase.from("programs").select("*").order("created_at"),
-        supabase.from("registrations").select("*"),
-        supabase.from("attendance").select("*"),
-        supabase.from("surveys").select("*"),
-      ]);
-      setPrograms(progs ?? []);
-      setRegistrations(regs ?? []);
-      setAttendance(att ?? []);
-      setSurveys(svs ?? []);
-
       try {
-        const res = await fetch("/api/admin/participants");
-        const { participants } = await res.json();
-        setParticipantsCount(participants?.length ?? 0);
+        const res = await fetch("/api/admin/dashboard");
+        const { programs: progs, registrations: regs, attendance: att, surveys: svs, participantsCount: pc } = await res.json();
+        setPrograms(progs ?? []);
+        setRegistrations(regs ?? []);
+        setAttendance(att ?? []);
+        setSurveys(svs ?? []);
+        setParticipantsCount(pc ?? 0);
       } catch {
-        setParticipantsCount(0);
+        // 실패 시 빈 상태로 유지
       }
     })();
   }, []);
@@ -62,7 +54,7 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <div className="px-4 pt-4">
-        <h1 className="font-display text-lg text-navy">Experience Passport 운영 현황</h1>
+        <h1 className="font-display text-lg text-navy">PassUp 운영 현황</h1>
         <p className="text-xs text-muted mt-0.5">{rangeStart} – {rangeEnd}</p>
       </div>
 

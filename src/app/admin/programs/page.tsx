@@ -12,12 +12,10 @@ export default function AdminProgramsPage() {
 
   const load = () => {
     supabase.from("programs").select("*").order("created_at").then(({ data }) => setPrograms(data ?? []));
-    supabase.from("registrations").select("program_id, status").then(({ data }) => {
+    supabase.rpc("rpc_program_registration_counts").then(({ data }) => {
       const map: Record<string, { applied: number; selected: number }> = {};
-      (data ?? []).forEach((r) => {
-        map[r.program_id] = map[r.program_id] ?? { applied: 0, selected: 0 };
-        if (r.status !== "cancelled" && r.status !== "rejected") map[r.program_id].applied += 1;
-        if (r.status === "selected") map[r.program_id].selected += 1;
+      (data ?? []).forEach((r: { program_id: string; active_count: number; selected_count: number }) => {
+        map[r.program_id] = { applied: r.active_count, selected: r.selected_count };
       });
       setCounts(map);
     });

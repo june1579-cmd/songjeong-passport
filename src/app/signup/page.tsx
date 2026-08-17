@@ -102,7 +102,7 @@ function SignupInner() {
         <div className="p-4 space-y-4">
           <div className="flex items-center gap-2 text-navy mb-1">
             <UserPlus size={18} />
-            <p className="text-sm font-medium">Experience Passport 가입을 위해 개인정보 수집·이용에 동의해주세요.</p>
+            <p className="text-sm font-medium">PassUp 가입을 위해 개인정보 수집·이용에 동의해주세요.</p>
           </div>
           <div className="rounded-xl border border-line p-3 bg-white text-xs leading-relaxed text-ink space-y-1">
             <p className="font-medium">수집 항목</p>
