@@ -61,6 +61,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => String(i + 1).padStart(2, "0")); // 01~24
+const MINUTE_OPTIONS = ["00", "30"];
+
+// 오전/오후 없이 01~24시, 00/30분 단위로만 고르는 시간 선택기.
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h = "10", m = "00"] = value.split(":");
+  const hour = h === "00" ? "24" : h; // 내부적으로 24시는 00시와 동일하게 저장하되, 선택지엔 24로 표시
+  const isMidnight = hour === "24";
+  const set = (nh: string, nm: string) => onChange(`${nh}:${nh === "24" ? "00" : nm}`); // 24시는 정각만 허용
+  return (
+    <div className="flex items-center gap-1">
+      <select value={hour} onChange={(e) => set(e.target.value, m)} className="border border-line rounded-lg px-1.5 py-1 text-xs">
+        {HOUR_OPTIONS.map((h) => <option key={h} value={h}>{h}시</option>)}
+      </select>
+      <select value={isMidnight ? "00" : m} disabled={isMidnight} onChange={(e) => set(hour, e.target.value)} className="border border-line rounded-lg px-1.5 py-1 text-xs disabled:bg-sand disabled:text-muted">
+        {MINUTE_OPTIONS.map((m) => <option key={m} value={m}>{m}분</option>)}
+      </select>
+    </div>
+  );
+}
+
 const inputCls = "w-full border border-line rounded-lg px-3 py-2.5 text-sm";
 
 export function ProgramBasicFields({
@@ -338,19 +359,9 @@ export function SessionEditor({
             </div>
             <div className="flex items-center gap-2 pl-0.5">
               <span className="text-[11px] text-muted">시간</span>
-              <input
-                type="time"
-                value={s.start_time}
-                onChange={(e) => update(s.key, { start_time: e.target.value })}
-                className="border border-line rounded-lg px-2 py-1 text-xs"
-              />
+              <TimeSelect value={s.start_time} onChange={(v) => update(s.key, { start_time: v })} />
               <span className="text-[11px] text-muted">~</span>
-              <input
-                type="time"
-                value={s.end_time}
-                onChange={(e) => update(s.key, { end_time: e.target.value })}
-                className="border border-line rounded-lg px-2 py-1 text-xs"
-              />
+              <TimeSelect value={s.end_time} onChange={(v) => update(s.key, { end_time: v })} />
             </div>
             <div className="flex items-center gap-2 pl-0.5">
               <span className="text-[11px] text-muted">이 회차 정원</span>

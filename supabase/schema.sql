@@ -409,3 +409,25 @@ drop policy if exists "admin write programs" on programs;
 drop policy if exists "admin update programs" on programs;
 drop policy if exists "admin write sessions" on sessions;
 drop policy if exists "admin delete sessions" on sessions;
+
+-- =================================================================
+-- 확장 12: 프로그램별 참여자 대화방 (실시간 채팅)
+-- =================================================================
+create table if not exists program_messages (
+  id uuid primary key default gen_random_uuid(),
+  program_id text not null references programs(id) on delete cascade,
+  participant_id uuid not null references participants(id) on delete cascade,
+  author_name text not null,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_program_messages_program on program_messages(program_id, created_at);
+
+alter table program_messages enable row level security;
+drop policy if exists "public read program_messages" on program_messages;
+create policy "public read program_messages" on program_messages for select using (true);
+drop policy if exists "anon insert program_messages" on program_messages;
+create policy "anon insert program_messages" on program_messages for insert with check (true);
+
+-- 실시간 기능(Realtime)을 이 테이블에 활성화 (메시지가 즉시 다른 참여자 화면에 뜨도록)
+alter publication supabase_realtime add table program_messages;

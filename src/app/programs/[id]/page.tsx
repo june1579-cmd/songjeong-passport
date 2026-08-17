@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, Users, CreditCard, QrCode, CheckCircle2, Images, ListChecks, Star, MessageSquarePlus } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, CreditCard, QrCode, CheckCircle2, Images, ListChecks, Star, MessageSquarePlus, MessagesSquare } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
 import { Program, Session, Participant, Registration, Attendance, Photo, Review, APPLICATION_STATUS_LABEL } from "@/lib/types";
@@ -252,6 +253,21 @@ export default function ProgramDetailPage() {
               <CheckCircle2 size={16} /> {APPLICATION_STATUS_LABEL[registration.status]}
             </div>
           </div>
+        )}
+
+        {registration && registration.status !== "rejected" && registration.status !== "cancelled" && (
+          <Link
+            href={`/programs/${program.id}/chat`}
+            className="flex items-center gap-2 rounded-xl border border-line bg-white p-3.5"
+          >
+            <div className="w-9 h-9 rounded-full bg-navy flex items-center justify-center flex-shrink-0">
+              <MessagesSquare size={16} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-ink">참여자 대화방</p>
+              <p className="text-[11px] text-muted">함께 참여하는 분들과 실시간으로 이야기해보세요</p>
+            </div>
+          </Link>
         )}
 
         {registration && registration.status !== "rejected" && registration.status !== "cancelled" && registration.status !== "waitlisted" && (

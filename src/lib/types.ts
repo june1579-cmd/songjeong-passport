@@ -160,6 +160,15 @@ export interface RegistrationSession {
   created_at: string;
 }
 
+export interface ProgramMessage {
+  id: string;
+  program_id: string;
+  participant_id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
 export const AGE_OPTIONS = ["10대", "20대", "30대", "40대", "50대", "60대 이상"];
 export const RESIDENCE_OPTIONS = ["송정동", "해운대구 다른 지역", "부산 다른 지역", "기타"];
 export const CHANNEL_OPTIONS = ["동주민센터", "기존 프로그램", "지인 추천", "카카오톡", "SNS", "현수막/포스터", "기타"];
