@@ -273,6 +273,7 @@ export default function ProgramDetailPage() {
         {registration && registration.status !== "rejected" && registration.status !== "cancelled" && registration.status !== "waitlisted" && (
           <div className="space-y-2">
             <p className="text-sm font-medium px-1 mt-2 text-muted">회차 / QR 체크인</p>
+            <p className="text-[11px] text-muted/80 px-1 -mt-1">현장에 게시된 QR 코드를 스캔해야 체크인이 완료돼요.</p>
             {sessions.map((s) => {
               const done = attendance.some((a) => a.session_id === s.id);
               const count = sessionCounts[s.id] ?? 0;
@@ -292,10 +293,10 @@ export default function ProgramDetailPage() {
                     <Pill tone="coral">마감</Pill>
                   ) : (
                     <button
-                      onClick={() => router.push(`/checkin/${s.qr_token}`)}
+                      onClick={() => router.push("/scan")}
                       className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full text-white bg-navy"
                     >
-                      <QrCode size={13} /> 체크인
+                      <QrCode size={13} /> QR 스캔하기
                     </button>
                   )}
                 </div>

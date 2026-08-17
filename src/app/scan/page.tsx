@@ -22,6 +22,11 @@ export default function ScanPage() {
 
   const startCamera = async () => {
     setError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setStatus("denied");
+      setError("이 브라우저에서는 카메라를 사용할 수 없어요. 카카오톡 등 인앱 브라우저라면 '다른 브라우저로 열기'를 사용해보세요.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
       streamRef.current = stream;
@@ -95,12 +100,10 @@ export default function ScanPage() {
           </div>
         )}
 
-        {(status === "scanning" || status === "found") && (
-          <div className="w-full max-w-sm relative rounded-2xl overflow-hidden border-2 border-white/30">
-            <video ref={videoRef} className="w-full h-auto" muted playsInline />
-            <div className="absolute inset-8 border-2 border-coral rounded-xl pointer-events-none" />
-          </div>
-        )}
+        <div className={`w-full max-w-sm relative rounded-2xl overflow-hidden border-2 border-white/30 mb-2 ${status === "scanning" || status === "found" ? "" : "hidden"}`}>
+          <video ref={videoRef} className="w-full h-auto" muted playsInline autoPlay />
+          <div className="absolute inset-8 border-2 border-coral rounded-xl pointer-events-none" />
+        </div>
         <canvas ref={canvasRef} className="hidden" />
 
         {status === "scanning" && <p className="text-white/70 text-xs mt-4">QR 코드를 화면 중앙에 맞춰주세요...</p>}
