@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Stamp, Check, ArrowRight } from "lucide-react";
+import { Stamp, Check, ArrowRight, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { getStoredParticipantId, setStoredParticipantId } from "@/lib/participant-session";
+import { getStoredParticipantId, setStoredParticipantId, clearStoredParticipantId } from "@/lib/participant-session";
 import { Participant, Attendance, Program, Session, Registration, RegistrationSession } from "@/lib/types";
 import { categoryColor, programColor } from "@/lib/category-colors";
 import StampBadge from "@/components/StampBadge";
@@ -155,8 +155,23 @@ export default function PassportPage() {
   return (
     <div className="pb-24 min-h-screen">
       <div className="px-5 pt-8 pb-6 text-white" style={{ background: "linear-gradient(150deg, #0D3B4E 0%, #2E8FC0 40%, #3F9179 75%, #9C6FCB 130%)" }}>
-        <p className="text-xs text-white/70">나의 PassUp</p>
-        <h2 className="font-display text-xl mt-1">{me.name}님</h2>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs text-white/70">나의 PassUp</p>
+            <h2 className="font-display text-xl mt-1">{me.name}님</h2>
+          </div>
+          <button
+            onClick={() => {
+              if (window.confirm("로그아웃 하시겠어요? 다시 로그인하려면 이름과 휴대폰 번호 뒤 4자리가 필요해요.")) {
+                clearStoredParticipantId();
+                window.location.href = "/";
+              }
+            }}
+            className="flex items-center gap-1 text-[11px] text-white/70 mt-1"
+          >
+            <LogOut size={12} /> 로그아웃
+          </button>
+        </div>
         <div className="flex gap-5 mt-4">
           <div><div className="font-display text-lg">{myPrograms.size}개</div><div className="text-[11px] text-white/70">활동 경험</div></div>
           <div><div className="font-display text-lg">{attendance.length}회</div><div className="text-[11px] text-white/70">총 참여</div></div>

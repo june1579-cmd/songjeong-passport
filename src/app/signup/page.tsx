@@ -79,7 +79,22 @@ function SignupInner() {
       p_residence_district: residenceDistrict,
       p_residence_dong: residenceDong.trim(),
     });
-    if (insertErr || !newId) { setError("가입 처리 중 문제가 발생했습니다. 다시 시도해주세요."); setSaving(false); return; }
+    if (insertErr) {
+      // 아주 드물게 거의 동시에 같은 번호로 가입 시도가 겹친 경우 — 새로 만들지 않고 기존 계정으로 로그인 처리
+      if (insertErr.message.includes("duplicate") || insertErr.message.includes("unique")) {
+        const { data: retryId } = await supabase.rpc("rpc_check_phone_exists", { p_phone_number: phoneRaw });
+        if (retryId) {
+          setStoredParticipantId(retryId as string);
+          setSaving(false);
+          router.push(next);
+          return;
+        }
+      }
+      setError("가입 처리 중 문제가 발생했습니다. 다시 시도해주세요.");
+      setSaving(false);
+      return;
+    }
+    if (!newId) { setError("가입 처리 중 문제가 발생했습니다. 다시 시도해주세요."); setSaving(false); return; }
 
     await supabase.from("consents").insert([
       { participant_id: newId, consent_type: "privacy_required", agreed: true },
@@ -197,7 +212,16 @@ function SignupInner() {
           </div>
           <div>
             <label className="text-xs font-medium block mb-1.5 text-muted">거주 구/군</label>
-            <ChipSelect options={BUSAN_DISTRICTS} value={residenceDistrict} onChange={setResidenceDistrict} />
+            <select
+              value={residenceDistrict}
+              onChange={(e) => setResidenceDistrict(e.target.value)}
+              className="w-full border border-line rounded-lg px-3 py-2.5 text-sm bg-white"
+            >
+              <option value="">선택해주세요</option>
+              {BUSAN_DISTRICTS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-xs font-medium block mb-1.5 text-muted">거주 동/읍/면</label>

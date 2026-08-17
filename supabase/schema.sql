@@ -586,3 +586,11 @@ begin
 end;
 $$;
 grant execute on function rpc_create_registration(uuid, text, text) to anon;
+
+-- =================================================================
+-- 확장 17: 같은 전화번호로 중복 가입 방지 (DB 차원에서 확실하게 잠금)
+-- =================================================================
+-- phone_number가 null인 레코드는 여러 개 있어도 무방(표준 SQL: null끼리는 unique 위반 아님).
+-- 이미 중복 데이터가 있으면 이 제약 추가가 실패할 수 있으니, 먼저 아래 조회로 확인 후 진행 권장:
+--   select phone_number, count(*) from participants where phone_number is not null group by phone_number having count(*) > 1;
+alter table participants add constraint participants_phone_number_key unique (phone_number);

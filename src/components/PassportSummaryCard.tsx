@@ -14,18 +14,23 @@ export default function PassportSummaryCard({
 }) {
   if (!identified) {
     return (
-      <Link href="/signup" className="block rounded-2xl border border-line bg-white p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-sand flex items-center justify-center flex-shrink-0">
-            <Stamp size={18} className="text-navy" />
+      <div className="rounded-2xl border border-line bg-white p-4">
+        <Link href="/signup" className="block">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-sand flex items-center justify-center flex-shrink-0">
+              <Stamp size={18} className="text-navy" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-ink">PassUp 회원가입</p>
+              <p className="text-xs text-muted mt-0.5">가입하면 프로그램에 참여하면서 나만의 평생학습 기록이 만들어져요.</p>
+            </div>
+            <ArrowRight size={16} className="text-muted flex-shrink-0" />
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-ink">PassUp 회원가입</p>
-            <p className="text-xs text-muted mt-0.5">가입하면 프로그램에 참여하면서 나만의 평생학습 기록이 만들어져요.</p>
-          </div>
-          <ArrowRight size={16} className="text-muted flex-shrink-0" />
-        </div>
-      </Link>
+        </Link>
+        <Link href="/passport" className="block text-center text-xs text-coral mt-3 pt-3 border-t border-line">
+          이미 가입하셨나요? 로그인
+        </Link>
+      </div>
     );
   }
 
