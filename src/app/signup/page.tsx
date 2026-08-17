@@ -1,5 +1,6 @@
 "use client";
 import { useState, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShieldCheck, CheckCircle2, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -108,6 +109,9 @@ function SignupInner() {
             <p className="font-medium mt-2">보유 기간</p>
             <p className="text-muted">가입일로부터 1년 또는 회원 탈퇴(삭제 요청) 시까지</p>
           </div>
+          <Link href="/privacy" target="_blank" className="block text-xs text-navy underline">
+            개인정보처리방침 전문 보기 →
+          </Link>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={agreeRequired} onChange={(e) => setAgreeRequired(e.target.checked)} className="mt-0.5" />
             <span className="text-ink">(필수) 개인정보 수집·이용에 동의합니다.</span>

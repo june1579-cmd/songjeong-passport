@@ -232,6 +232,8 @@ export default function HomePage() {
       </div>
 
       <div className="px-4 mt-8 text-center">
+        <a href="/privacy" className="text-[11px] text-muted/70">개인정보처리방침</a>
+        <span className="text-[11px] text-muted/40 mx-1.5">·</span>
         <a href="/admin/login" className="text-[11px] text-muted/70">운영자 로그인</a>
       </div>
 
