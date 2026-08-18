@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, Archive, ArchiveRestore, Trash2, Save, AlertTriangle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { Participant, AGE_OPTIONS, BUSAN_DISTRICTS, APPLICATION_STATUS_LABEL, ApplicationStatus } from "@/lib/types";
 import Pill from "@/components/Pill";
 
 interface ParticipantWithPrograms extends Participant {
   programs: { id: string; emoji: string | null; title: string; status: ApplicationStatus }[];
 }
+
+type GroupMode = "none" | "age" | "program";
 
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...options?.headers } });
@@ -16,8 +19,10 @@ async function api(path: string, options?: RequestInit) {
 
 export default function AdminParticipantsPage() {
   const [participants, setParticipants] = useState<ParticipantWithPrograms[]>([]);
+  const [allPrograms, setAllPrograms] = useState<{ id: string; emoji: string | null; title: string }[]>([]);
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [groupMode, setGroupMode] = useState<GroupMode>("none");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ name: string; age_group: string; residence_district: string; residence_dong: string } | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -33,7 +38,10 @@ export default function AdminParticipantsPage() {
       setError(e.message ?? "불러오기에 실패했습니다.");
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    supabase.from("programs").select("id, emoji, title").order("created_at").then(({ data }) => setAllPrograms(data ?? []));
+  }, []);
 
   const filtered = participants.filter((p) => {
     if (p.is_archived !== showArchived) return false;
@@ -41,6 +49,24 @@ export default function AdminParticipantsPage() {
     const addr = `${p.residence_district ?? ""} ${p.residence_dong ?? ""} ${p.residence_area ?? ""}`;
     return p.name.includes(query) || p.phone4.includes(query) || (p.phone_number ?? "").includes(query) || addr.includes(query);
   });
+
+  // 연령대별 / 프로그램별로 묶어서 볼 수 있게 그룹 구성 (참여자가 여러 프로그램에 신청했으면 각 그룹에 중복으로 나타남)
+  const groups = useMemo((): { key: string; label: string; items: ParticipantWithPrograms[] }[] => {
+    if (groupMode === "age") {
+      return AGE_OPTIONS.map((age) => ({ key: age, label: age, items: filtered.filter((p) => p.age_group === age) })).filter((g) => g.items.length > 0);
+    }
+    if (groupMode === "program") {
+      const result = allPrograms.map((prog) => ({
+        key: prog.id,
+        label: `${prog.emoji ?? ""} ${prog.title}`,
+        items: filtered.filter((p) => p.programs.some((pp) => pp.id === prog.id)),
+      })).filter((g) => g.items.length > 0);
+      const noProgram = filtered.filter((p) => p.programs.length === 0);
+      if (noProgram.length > 0) result.push({ key: "__none__", label: "신청한 프로그램 없음", items: noProgram });
+      return result;
+    }
+    return [{ key: "__all__", label: "", items: filtered }];
+  }, [groupMode, filtered, allPrograms]);
 
   const toggleOne = (id: string) => {
     const next = new Set(selectedIds);
@@ -97,10 +123,88 @@ export default function AdminParticipantsPage() {
     load();
   };
 
+  const renderParticipant = (p: ParticipantWithPrograms) => (
+    <div key={p.id} className="rounded-xl border border-line bg-white p-3">
+      {editingId === p.id && editDraft ? (
+        <div className="space-y-2">
+          <input
+            value={editDraft.name}
+            onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
+            className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm"
+          />
+          <div className="flex gap-2">
+            <select value={editDraft.age_group} onChange={(e) => setEditDraft({ ...editDraft, age_group: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
+              {AGE_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <select value={editDraft.residence_district} onChange={(e) => setEditDraft({ ...editDraft, residence_district: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
+              <option value="">구/군 선택</option>
+              {BUSAN_DISTRICTS.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <input
+              value={editDraft.residence_dong}
+              onChange={(e) => setEditDraft({ ...editDraft, residence_dong: e.target.value })}
+              placeholder="동/읍/면"
+              className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => saveEdit(p.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-coral text-white text-xs font-medium">
+              <Save size={13} /> 저장
+            </button>
+            <button onClick={() => { setEditingId(null); setEditDraft(null); }} className="flex-1 py-1.5 rounded-lg border border-line text-xs text-muted">
+              취소
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} className="flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-ink">{p.name}</p>
+              <span className="text-[10px] text-muted">· {p.age_group}</span>
+            </div>
+            <div className="grid grid-cols-[52px_1fr] gap-x-2 gap-y-0.5 text-[11px] text-muted max-w-xs mt-1">
+              <span className="text-muted/70">전화번호</span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{p.phone_number ?? `****-****-${p.phone4}`}</span>
+              <span className="text-muted/70">거주지</span>
+              <span>{p.residence_district ? `${p.residence_district} ${p.residence_dong ?? ""}` : p.residence_area}</span>
+              {p.guardian_name && (
+                <>
+                  <span className="text-muted/70">보호자</span>
+                  <span>{p.guardian_name} · {p.guardian_phone}</span>
+                </>
+              )}
+            </div>
+            {p.programs.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {p.programs.map((prog) => (
+                  <Pill key={prog.id} tone={prog.status === "selected" ? "seafoam" : prog.status === "waitlisted" ? "coral" : "sand"}>
+                    {prog.emoji} {prog.title} · {APPLICATION_STATUS_LABEL[prog.status]}
+                  </Pill>
+                ))}
+              </div>
+            )}
+            {p.programs.length === 0 && <p className="text-[11px] text-muted/60 mt-1.5">신청한 프로그램 없음</p>}
+          </div>
+          <div className="flex flex-col gap-1.5 flex-shrink-0 self-start">
+            <button onClick={() => startEdit(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy">수정</button>
+            <button onClick={() => toggleArchive(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy flex items-center gap-1">
+              {p.is_archived ? <><ArchiveRestore size={12} /> 복원</> : <><Archive size={12} /> 보관</>}
+            </button>
+            <button onClick={() => remove(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-coralDark">
+              <Trash2 size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-4 pb-16">
       <h1 className="font-display text-lg text-navy mb-1">참여자 명단 관리</h1>
-      <p className="text-xs text-muted mb-4">이름/전화번호/지역으로 검색, 정보 수정, 보관, 개별·일괄 삭제가 가능합니다. 각 참여자가 신청한 프로그램도 함께 보여요.</p>
+      <p className="text-xs text-muted mb-4">이름/전화번호/지역으로 검색, 정보 수정, 보관, 개별·일괄 삭제가 가능합니다. 연령대별·프로그램별로 묶어서 볼 수 있어요.</p>
       {error && <p className="text-xs text-coralDark mb-2">{error}</p>}
 
       <div className="flex gap-2 mb-3">
@@ -121,6 +225,18 @@ export default function AdminParticipantsPage() {
         </button>
       </div>
 
+      <div className="flex gap-2 mb-3">
+        {([["none", "전체 보기"], ["age", "연령대별"], ["program", "프로그램별"]] as [GroupMode, string][]).map(([mode, label]) => (
+          <button
+            key={mode}
+            onClick={() => setGroupMode(mode)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-full ${groupMode === mode ? "bg-navy text-white" : "border border-line text-navy bg-white"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center justify-between mb-3 px-1">
         <label className="flex items-center gap-1.5 text-xs text-muted">
           <input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filtered.length} onChange={toggleAll} />
@@ -135,81 +251,15 @@ export default function AdminParticipantsPage() {
         </button>
       </div>
 
-      <div className="space-y-2">
-        {filtered.map((p) => (
-          <div key={p.id} className="rounded-xl border border-line bg-white p-3">
-            {editingId === p.id && editDraft ? (
-              <div className="space-y-2">
-                <input
-                  value={editDraft.name}
-                  onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
-                  className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm"
-                />
-                <div className="flex gap-2">
-                  <select value={editDraft.age_group} onChange={(e) => setEditDraft({ ...editDraft, age_group: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
-                    {AGE_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <select value={editDraft.residence_district} onChange={(e) => setEditDraft({ ...editDraft, residence_district: e.target.value })} className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs">
-                    <option value="">구/군 선택</option>
-                    {BUSAN_DISTRICTS.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <input
-                    value={editDraft.residence_dong}
-                    onChange={(e) => setEditDraft({ ...editDraft, residence_dong: e.target.value })}
-                    placeholder="동/읍/면"
-                    className="flex-1 border border-line rounded-lg px-2 py-1.5 text-xs"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => saveEdit(p.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-coral text-white text-xs font-medium">
-                    <Save size={13} /> 저장
-                  </button>
-                  <button onClick={() => { setEditingId(null); setEditDraft(null); }} className="flex-1 py-1.5 rounded-lg border border-line text-xs text-muted">
-                    취소
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} className="flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ink mb-1">{p.name}</p>
-                  <div className="grid grid-cols-[52px_1fr] gap-x-2 gap-y-0.5 text-[11px] text-muted max-w-xs">
-                    <span className="text-muted/70">전화번호</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{p.phone_number ?? `****-****-${p.phone4}`}</span>
-                    <span className="text-muted/70">연령대</span>
-                    <span>{p.age_group}</span>
-                    <span className="text-muted/70">거주지</span>
-                    <span>{p.residence_district ? `${p.residence_district} ${p.residence_dong ?? ""}` : p.residence_area}</span>
-                    {p.guardian_name && (
-                      <>
-                        <span className="text-muted/70">보호자</span>
-                        <span>{p.guardian_name} · {p.guardian_phone}</span>
-                      </>
-                    )}
-                  </div>
-                  {p.programs.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {p.programs.map((prog) => (
-                        <Pill key={prog.id} tone={prog.status === "selected" ? "seafoam" : prog.status === "waitlisted" ? "coral" : "sand"}>
-                          {prog.emoji} {prog.title} · {APPLICATION_STATUS_LABEL[prog.status]}
-                        </Pill>
-                      ))}
-                    </div>
-                  )}
-                  {p.programs.length === 0 && <p className="text-[11px] text-muted/60 mt-1.5">신청한 프로그램 없음</p>}
-                </div>
-                <div className="flex flex-col gap-1.5 flex-shrink-0 self-start">
-                  <button onClick={() => startEdit(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy">수정</button>
-                  <button onClick={() => toggleArchive(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy flex items-center gap-1">
-                    {p.is_archived ? <><ArchiveRestore size={12} /> 복원</> : <><Archive size={12} /> 보관</>}
-                  </button>
-                  <button onClick={() => remove(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-coralDark">
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              </div>
+      <div className="space-y-5">
+        {groups.map((g) => (
+          <div key={g.key}>
+            {groupMode !== "none" && (
+              <p className="text-xs font-semibold text-navy tracking-tight px-1 mb-2">
+                {g.label} <span className="text-muted font-normal">({g.items.length}명)</span>
+              </p>
             )}
+            <div className="space-y-2">{g.items.map(renderParticipant)}</div>
           </div>
         ))}
         {filtered.length === 0 && <p className="text-xs text-muted px-1">{showArchived ? "보관된 참여자가 없습니다." : "참여자가 없습니다."}</p>}
