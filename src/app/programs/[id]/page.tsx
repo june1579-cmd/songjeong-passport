@@ -35,6 +35,7 @@ export default function ProgramDetailPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [me, setMe] = useState<Participant | null>(null);
   const [registration, setRegistration] = useState<Registration | null>(null);
+  const [mySessionCount, setMySessionCount] = useState(0);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
@@ -76,9 +77,14 @@ export default function ProgramDetailPage() {
       setMe(participant);
       if (participant) {
         const { data: regs } = await supabase.rpc("rpc_get_my_registration_for_program", { p_participant_id: participant.id, p_program_id: id });
-        setRegistration(regs?.[0] ?? null);
+        const reg = regs?.[0] ?? null;
+        setRegistration(reg);
         const { data: att } = await supabase.rpc("rpc_get_my_attendance_for_program", { p_participant_id: participant.id, p_program_id: id });
         setAttendance(att ?? []);
+        if (reg) {
+          const { data: rs } = await supabase.from("registration_sessions").select("session_id").eq("registration_id", reg.id);
+          setMySessionCount(rs?.length ?? 0);
+        }
       }
     }
   };
@@ -96,6 +102,14 @@ export default function ProgramDetailPage() {
   const remaining = remainingSpots(totalCapacity ?? null, totalRegCount);
   const dateRange = sessions.length ? `${sessions[0].session_date} ~ ${sessions[sessions.length - 1].session_date}` : "";
   const canApply = !registration && cardStatus !== "full" && cardStatus !== "closed" && cardStatus !== "cancelled";
+  // 이미 신청은 했지만(예: 3차만 신청) "회차 자유 선택" 프로그램이고 최대 개수를 아직 다 채우지 않았다면 더 신청할 수 있게 한다.
+  const canAddMoreSessions =
+    !!registration &&
+    registration.status !== "rejected" &&
+    registration.status !== "cancelled" &&
+    program?.session_selection_mode === "select" &&
+    program?.max_selectable_sessions !== null &&
+    mySessionCount < (program?.max_selectable_sessions ?? 0);
 
   return (
     <div className="pb-28">
@@ -254,6 +268,14 @@ export default function ProgramDetailPage() {
             >
               <CheckCircle2 size={16} /> {APPLICATION_STATUS_LABEL[registration.status]}
             </div>
+            {canAddMoreSessions && (
+              <button
+                onClick={() => router.push(`/join?programId=${program.id}`)}
+                className="mt-2.5 w-full flex items-center justify-center gap-1 text-xs font-medium py-2.5 rounded-lg bg-coral text-white"
+              >
+                <Calendar size={13} /> 회차 추가 신청하기 ({mySessionCount}/{program.max_selectable_sessions} 신청됨)
+              </button>
+            )}
           </div>
         )}
 
