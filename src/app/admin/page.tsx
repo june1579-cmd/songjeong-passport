@@ -145,11 +145,15 @@ export default function AdminDashboardPage() {
           {flowPairs.map(({ from, to }) => {
             const conv = computeConversion(from.id, to.id, attendance);
             return (
-              <div key={from.id} className="rounded-xl border border-line p-3 flex items-center gap-2 bg-white">
-                <span className="text-sm">{from.emoji} {from.title}</span>
-                <ArrowRight size={14} className="text-muted" />
-                <span className="text-sm flex-1">{to.emoji} {to.title}</span>
-                <Pill tone="coral">{conv.converted}명 · {conv.rate.toFixed(0)}%</Pill>
+              <div key={from.id} className="rounded-xl border border-line p-3 bg-white space-y-1.5">
+                <p className="text-sm text-ink font-medium break-words">{from.emoji} {from.title}</p>
+                <div className="flex items-start gap-1.5 pl-1">
+                  <ArrowRight size={13} className="text-muted flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-ink flex-1 min-w-0 break-words">{to.emoji} {to.title}</p>
+                </div>
+                <div className="flex justify-end pt-0.5">
+                  <Pill tone="coral">{conv.converted}명 · {conv.rate.toFixed(0)}%</Pill>
+                </div>
               </div>
             );
           })}
