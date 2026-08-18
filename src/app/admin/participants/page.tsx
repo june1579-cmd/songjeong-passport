@@ -181,6 +181,12 @@ export default function AdminParticipantsPage() {
                     <span>{p.age_group}</span>
                     <span className="text-muted/70">거주지</span>
                     <span>{p.residence_district ? `${p.residence_district} ${p.residence_dong ?? ""}` : p.residence_area}</span>
+                    {p.guardian_name && (
+                      <>
+                        <span className="text-muted/70">보호자</span>
+                        <span>{p.guardian_name} · {p.guardian_phone}</span>
+                      </>
+                    )}
                   </div>
                   {p.programs.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">

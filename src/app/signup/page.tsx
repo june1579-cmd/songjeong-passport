@@ -44,6 +44,8 @@ function SignupInner() {
   const [ageGroup, setAgeGroup] = useState("");
   const [residenceDistrict, setResidenceDistrict] = useState("");
   const [residenceDong, setResidenceDong] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,7 +67,10 @@ function SignupInner() {
     setStep("details");
   };
 
-  const canSubmit = isValidName(name) && ageGroup && residenceDistrict && residenceDong.trim();
+  const isMinor = ageGroup === "10대";
+  const canSubmit =
+    isValidName(name) && ageGroup && residenceDistrict && residenceDong.trim() &&
+    (!isMinor || (isValidName(guardianName) && guardianPhone.replace(/\D/g, "").length >= 10));
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -89,6 +94,8 @@ function SignupInner() {
       p_residence_area: `${residenceDistrict} ${residenceDong.trim()}`,
       p_residence_district: residenceDistrict,
       p_residence_dong: residenceDong.trim(),
+      p_guardian_name: isMinor ? guardianName.trim() : null,
+      p_guardian_phone: isMinor ? guardianPhone.trim() : null,
     });
     if (insertErr) {
       // 아주 드물게 거의 동시에 같은 번호로 가입 시도가 겹친 경우 — 새로 만들지 않고 기존 계정으로 로그인 처리
@@ -147,7 +154,7 @@ function SignupInner() {
           </label>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={agreeAge} onChange={(e) => setAgreeAge(e.target.checked)} className="mt-0.5" />
-            <span className="text-ink">(필수) 만 14세 이상이거나, 보호자 동의 하에 가입합니다.</span>
+            <span className="text-ink">(필수) 만 14세 이상이거나, 만 14세 미만인 경우 보호자 정보를 제공하고 가입합니다.</span>
           </label>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} className="mt-0.5" />
@@ -225,6 +232,31 @@ function SignupInner() {
             <label className="text-xs font-medium block mb-1.5 text-muted">연령대</label>
             <ChipSelect options={AGE_OPTIONS} value={ageGroup} onChange={setAgeGroup} />
           </div>
+          {isMinor && (
+            <div className="rounded-xl border border-line bg-sand p-3 space-y-3">
+              <p className="text-xs font-medium text-navy">미성년자 가입 안내</p>
+              <p className="text-[11px] text-muted -mt-2">보호자님의 이름과 연락처를 알려주세요. 프로그램 관련 안내에 활용됩니다.</p>
+              <div>
+                <label className="text-xs font-medium block mb-1.5 text-muted">보호자 이름</label>
+                <input
+                  value={guardianName}
+                  onChange={(e) => setGuardianName(e.target.value)}
+                  placeholder="예: 김보호"
+                  className="w-full border border-line rounded-lg px-3 py-2.5 text-sm bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1.5 text-muted">보호자 연락처</label>
+                <input
+                  value={guardianPhone}
+                  onChange={(e) => setGuardianPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  inputMode="numeric"
+                  placeholder="01012345678"
+                  className="w-full border border-line rounded-lg px-3 py-2.5 text-sm bg-white"
+                />
+              </div>
+            </div>
+          )}
           <div>
             <label className="text-xs font-medium block mb-1.5 text-muted">거주 구/군</label>
             <select

@@ -64,6 +64,8 @@ export interface Participant {
   residence_area: string;
   residence_district: string | null;
   residence_dong: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   privacy_consent_at: string | null;
   is_archived: boolean;
   created_at: string;

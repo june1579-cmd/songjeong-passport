@@ -599,3 +599,38 @@ alter table participants add constraint participants_phone_number_key unique (ph
 -- 확장 18: 참여자 대화방 사진 첨부
 -- =================================================================
 alter table program_messages add column if not exists image_url text;
+
+-- =================================================================
+-- 확장 19: 미성년자 가입 시 보호자 정보 수집
+-- =================================================================
+alter table participants add column if not exists guardian_name text;
+alter table participants add column if not exists guardian_phone text;
+
+create or replace function rpc_create_participant(
+  p_name text, p_phone4 text, p_phone_number text, p_age_group text, p_residence_area text,
+  p_residence_district text default null, p_residence_dong text default null,
+  p_guardian_name text default null, p_guardian_phone text default null
+)
+returns uuid
+language sql security definer set search_path = public as $$
+  insert into participants (name, phone4, phone_number, age_group, residence_area, residence_district, residence_dong, guardian_name, guardian_phone, privacy_consent_at)
+  values (p_name, p_phone4, p_phone_number, p_age_group, p_residence_area, p_residence_district, p_residence_dong, p_guardian_name, p_guardian_phone, now())
+  returning id;
+$$;
+grant execute on function rpc_create_participant(text, text, text, text, text, text, text, text, text) to anon;
+
+drop function if exists rpc_get_my_participant(uuid);
+create function rpc_get_my_participant(p_id uuid)
+returns table (
+  id uuid, name text, age_group text, residence_area text, phone_number text, phone4 text,
+  privacy_consent_at timestamptz, is_archived boolean, created_at timestamptz,
+  residence_district text, residence_dong text, guardian_name text, guardian_phone text
+)
+language sql security definer set search_path = public as $$
+  select id, name, age_group, residence_area, phone_number, phone4, privacy_consent_at, is_archived, created_at,
+         residence_district, residence_dong, guardian_name, guardian_phone
+  from participants
+  where id = p_id
+  limit 1;
+$$;
+grant execute on function rpc_get_my_participant(uuid) to anon;

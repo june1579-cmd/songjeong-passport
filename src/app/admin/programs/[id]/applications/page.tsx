@@ -113,12 +113,13 @@ export default function ApplicationsPage() {
   };
 
   const downloadCsv = () => {
-    const header = ["이름", "전화번호", "연령대", "거주지역", "유입경로", "신청일", "기존참여횟수", "신청 회차", "상태"];
+    const header = ["이름", "전화번호", "연령대", "거주지역", "보호자", "유입경로", "신청일", "기존참여횟수", "신청 회차", "상태"];
     const lines = rows.map((r) => [
       r.participant.name,
       r.participant.phone_number ?? `****-****-${r.participant.phone4}`,
       r.participant.age_group,
       (r.participant.residence_district ? `${r.participant.residence_district} ${r.participant.residence_dong ?? ""}` : r.participant.residence_area),
+      r.participant.guardian_name ? `${r.participant.guardian_name} (${r.participant.guardian_phone})` : "",
       r.registration.acquisition_channel,
       new Date(r.registration.registered_at).toLocaleDateString("ko-KR"),
       String(r.priorVisits),
@@ -243,6 +244,9 @@ export default function ApplicationsPage() {
                     <div className="flex flex-col gap-0.5">
                       <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
                       <span className="font-medium text-ink">{r.participant.name}</span>
+                      {r.participant.guardian_name && (
+                        <span className="text-[10px] text-coralDark">보호자 {r.participant.guardian_name} · {r.participant.guardian_phone}</span>
+                      )}
                     </div>
                   </td>
                   <td className="p-2.5 align-middle whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
