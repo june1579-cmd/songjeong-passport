@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ demoMode: true, code });
   }
 
-  // 연동 정보가 있으면 실제 SMS 발송
+  // 연동 정보가 있으면 실제 SMS 발송을 시도하되, 실패해도(포인트 부족, IP 미등록 등)
+  // 회원가입 자체가 막히지 않도록 데모 모드로 자연스럽게 전환한다.
   try {
     const body = new URLSearchParams({
       key: aligoKey,
@@ -46,12 +47,12 @@ export async function POST(req: NextRequest) {
     const res = await fetch("https://apis.aligo.in/send/", { method: "POST", body });
     const data = await res.json();
     if (String(data.result_code) !== "1") {
-      console.error("Aligo SMS 발송 실패:", data);
-      return NextResponse.json({ error: "문자 발송에 실패했습니다. 잠시 후 다시 시도해주세요." }, { status: 500 });
+      console.error("Aligo SMS 발송 실패 — 데모 모드로 대체:", data);
+      return NextResponse.json({ demoMode: true, code });
     }
   } catch (e) {
-    console.error("Aligo SMS 요청 오류:", e);
-    return NextResponse.json({ error: "문자 발송 중 오류가 발생했습니다." }, { status: 500 });
+    console.error("Aligo SMS 요청 오류 — 데모 모드로 대체:", e);
+    return NextResponse.json({ demoMode: true, code });
   }
 
   return NextResponse.json({ demoMode: false });
