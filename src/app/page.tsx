@@ -161,7 +161,7 @@ export default function HomePage() {
 
       {slidePhotos.length > 0 && (
         <div className="px-4 mt-5">
-          <p className="text-sm font-medium px-1 mb-2 text-muted">진행되는 프로그램 현장</p>
+          <p className="text-xs font-semibold px-1 mb-2 text-navy tracking-tight">진행되는 프로그램 현장</p>
           <PhotoSlideshow photos={slidePhotos} programMap={programMap} />
           <Link href="/gallery" className="flex items-center justify-center gap-1 mt-2 text-xs font-medium text-navy py-2 rounded-lg border border-line bg-white">
             <Images size={14} /> 프로그램별 갤러리 전체보기
@@ -172,8 +172,8 @@ export default function HomePage() {
       {announcements.length > 0 && (
         <div className="px-4 mt-5">
           <div className="flex items-center gap-1.5 mb-2 px-1">
-            <Megaphone size={14} className="text-navy" />
-            <span className="text-sm font-medium text-navy">공지사항</span>
+            <Megaphone size={13} className="text-navy" />
+            <span className="text-xs font-semibold text-navy tracking-tight">공지사항</span>
           </div>
           <div className="space-y-2">
             {announcements.map((a) => (
@@ -215,7 +215,7 @@ export default function HomePage() {
       </div>
 
       <div className="px-4 mt-3 space-y-3">
-        <p className="text-sm font-medium px-1 text-muted">참여할 수 있는 프로그램</p>
+        <p className="text-xs font-semibold px-1 text-navy tracking-tight">참여할 수 있는 프로그램</p>
         {programs === null && <p className="text-xs text-muted px-1">불러오는 중...</p>}
         {filteredPrograms.map((p) => {
           const activeCount = registrationCounts[p.id] ?? 0;

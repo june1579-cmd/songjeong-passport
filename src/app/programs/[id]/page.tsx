@@ -168,8 +168,8 @@ export default function ProgramDetailPage() {
         {sessions.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 mb-2 px-1">
-              <ListChecks size={14} className="text-navy" />
-              <span className="text-sm font-medium text-navy">이런 활동을 해요</span>
+              <ListChecks size={13} className="text-navy" />
+              <span className="text-xs font-semibold text-navy tracking-tight">이런 활동을 해요</span>
             </div>
             <div className="rounded-xl border border-line bg-white divide-y divide-line">
               {sessions.map((s, i) => (
@@ -185,7 +185,7 @@ export default function ProgramDetailPage() {
 
         {(program.requirement || program.prep) && (
           <div>
-            <p className="text-sm font-medium px-1 mb-2 text-navy">참여 전 확인해주세요</p>
+            <p className="text-xs font-semibold px-1 mb-2 text-navy tracking-tight">참여 전 확인해주세요</p>
             <div className="rounded-xl border border-line bg-white p-4 space-y-2 text-sm">
               {program.prep && <p className="text-ink"><span className="text-muted">준비물 · </span>{program.prep}</p>}
               {program.requirement && <p className="text-ink"><span className="text-muted">유의사항 · </span>{program.requirement}</p>}
@@ -196,8 +196,8 @@ export default function ProgramDetailPage() {
         {photos.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 mb-2 px-1">
-              <Images size={14} className="text-navy" />
-              <span className="text-sm font-medium text-navy">프로그램 활동사진</span>
+              <Images size={13} className="text-navy" />
+              <span className="text-xs font-semibold text-navy tracking-tight">프로그램 활동사진</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {photos.map((ph) => (
@@ -214,8 +214,8 @@ export default function ProgramDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-2 px-1">
               <div className="flex items-center gap-1.5">
-                <Star size={14} className="text-navy" />
-                <span className="text-sm font-medium text-navy">참여자 후기 &amp; 사진</span>
+                <Star size={13} className="text-navy" />
+                <span className="text-xs font-semibold text-navy tracking-tight">참여자 후기 &amp; 사진</span>
               </div>
               {me && registration && (
                 <button onClick={() => setShowReviewModal(true)} className="flex items-center gap-1 text-xs font-medium text-coral">
@@ -298,7 +298,7 @@ export default function ProgramDetailPage() {
 
         {registration && registration.status !== "rejected" && registration.status !== "cancelled" && registration.status !== "waitlisted" && (
           <div className="space-y-2">
-            <p className="text-sm font-medium px-1 mt-2 text-muted">회차 / QR 체크인</p>
+            <p className="text-xs font-semibold px-1 mt-2 text-navy tracking-tight">회차 / QR 체크인</p>
             <p className="text-[11px] text-muted/80 px-1 -mt-1">현장에 게시된 QR 코드를 스캔해야 체크인이 완료돼요.</p>
             {sessions.map((s) => {
               const done = attendance.some((a) => a.session_id === s.id);

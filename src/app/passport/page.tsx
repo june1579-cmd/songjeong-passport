@@ -189,7 +189,7 @@ export default function PassportPage() {
       </div>
 
       <div className="px-4 mt-4">
-        <p className="text-sm font-medium px-1 mb-2 text-muted">송정 스탬프</p>
+        <p className="text-xs font-semibold px-1 mb-2 text-navy tracking-tight">송정 스탬프</p>
         <div className="flex flex-wrap gap-2 mb-5">
           {attendance.map((a, i) => <StampBadge key={a.id} n={i + 1} filled />)}
           {Array.from({ length: Math.max(0, 8 - attendance.length) }).map((_, i) => (
@@ -199,7 +199,7 @@ export default function PassportPage() {
 
         {journey.length > 1 && (
           <div className="mb-5">
-            <p className="text-sm font-medium px-1 mb-2 text-muted">나의 송정 여정</p>
+            <p className="text-xs font-semibold px-1 mb-2 text-navy tracking-tight">나의 송정 여정</p>
             <div className="rounded-xl border border-line bg-white p-4 space-y-3">
               {journey.map((p, i) => {
                 const attended = myPrograms.has(p.id);
@@ -224,11 +224,11 @@ export default function PassportPage() {
         )}
 
         <div className="mb-5">
-          <p className="text-sm font-medium px-1 mb-2 text-muted">나의 송정여정 (날짜별 보기)</p>
+          <p className="text-xs font-semibold px-1 mb-2 text-navy tracking-tight">나의 송정여정 (날짜별 보기)</p>
           <JourneyCalendar entries={calendarEntries} />
         </div>
 
-        <p className="text-sm font-medium px-1 mb-2 text-muted">활동 타임라인</p>
+        <p className="text-xs font-semibold px-1 mb-2 text-navy tracking-tight">활동 타임라인</p>
         <div className="space-y-2">
           {attendance.length === 0 && upcoming.length === 0 && (
             <p className="text-xs px-1 text-muted">아직 체크인 기록이 없어요. 프로그램에 참여해보세요!</p>

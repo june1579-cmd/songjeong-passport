@@ -176,7 +176,7 @@ function SignupInner() {
 
       {step === "phone" && (
         <div className="p-4 space-y-4">
-          <div className="flex items-center gap-1.5 text-sm font-medium text-navy"><ShieldCheck size={16} /> 휴대폰 본인 인증</div>
+          <div className="flex items-center gap-1.5 text-sm font-medium text-navy"><ShieldCheck size={16} /> 휴대폰 번호 확인</div>
           <div>
             <label className="text-xs font-medium block mb-1.5 text-muted">휴대폰 번호</label>
             <input
@@ -219,7 +219,7 @@ function SignupInner() {
 
       {step === "details" && (
         <div className="p-4 space-y-4">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-seafoam"><CheckCircle2 size={14} /> 휴대폰 인증 완료</div>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-seafoam"><CheckCircle2 size={14} /> 휴대폰 번호 확인 완료</div>
           <div>
             <label className="text-xs font-medium block mb-1.5 text-muted">실명</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 김주민" className="w-full border border-line rounded-lg px-3 py-2.5 text-sm" />
