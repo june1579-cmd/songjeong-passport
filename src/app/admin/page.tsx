@@ -36,10 +36,15 @@ export default function AdminDashboardPage() {
 
   const validRegs = registrations.filter((r) => r.status !== "cancelled" && r.status !== "rejected");
   const attendedParticipants = new Set(attendance.map((a) => a.participant_id)).size;
-  const convertedToNext = publishedPrograms.slice(0, -1).reduce((sum, p, i) => {
-    const to = publishedPrograms[i + 1];
-    return sum + computeConversion(p.id, to.id, attendance).converted;
-  }, 0);
+
+  // 실제 "다음 추천 프로그램" 연결(next_program_id)만 흐름으로 계산한다.
+  // (예전엔 목록에 나열된 순서대로 앞뒤를 붙여서 실제 설정과 안 맞는 조합이 나왔었다.)
+  const flowPairs = publishedPrograms
+    .filter((p) => p.next_program_id)
+    .map((p) => ({ from: p, to: publishedPrograms.find((x) => x.id === p.next_program_id) }))
+    .filter((pair): pair is { from: Program; to: Program } => !!pair.to);
+
+  const convertedToNext = flowPairs.reduce((sum, { from, to }) => sum + computeConversion(from.id, to.id, attendance).converted, 0);
   const funnel = [
     { label: "신청", value: validRegs.length },
     { label: "참석", value: attendedParticipants },
@@ -137,18 +142,22 @@ export default function AdminDashboardPage() {
           <span className="text-sm font-medium text-navy">프로그램 참여 흐름</span>
         </div>
         <div className="space-y-2">
-          {publishedPrograms.slice(0, -1).map((p, i) => {
-            const to = publishedPrograms[i + 1];
-            const conv = computeConversion(p.id, to.id, attendance);
+          {flowPairs.map(({ from, to }) => {
+            const conv = computeConversion(from.id, to.id, attendance);
             return (
-              <div key={p.id} className="rounded-xl border border-line p-3 flex items-center gap-2 bg-white">
-                <span className="text-sm">{p.emoji} {p.title}</span>
+              <div key={from.id} className="rounded-xl border border-line p-3 flex items-center gap-2 bg-white">
+                <span className="text-sm">{from.emoji} {from.title}</span>
                 <ArrowRight size={14} className="text-muted" />
                 <span className="text-sm flex-1">{to.emoji} {to.title}</span>
                 <Pill tone="coral">{conv.converted}명 · {conv.rate.toFixed(0)}%</Pill>
               </div>
             );
           })}
+          {flowPairs.length === 0 && (
+            <p className="text-xs text-muted px-1">
+              아직 "다음 추천 프로그램" 연결이 설정된 프로그램이 없어요. 프로그램 편집 화면에서 설정할 수 있어요.
+            </p>
+          )}
         </div>
       </div>
 
