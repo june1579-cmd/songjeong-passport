@@ -72,11 +72,16 @@ export function generateInsights(
   }
 
   // 프로그램 간 전환 중 가장 높은 비율
+  // 프로그램 간 재참여 전환 — 실제 "다음 추천 프로그램" 연결(next_program_id)만 사용
   let bestConversion: { from: string; to: string; rate: number } | null = null;
-  for (let i = 0; i < programs.length - 1; i++) {
-    const conv = computeConversion(programs[i].id, programs[i + 1].id, attendance);
+  const linkedPairs = programs
+    .filter((p) => p.next_program_id)
+    .map((p) => ({ from: p, to: programs.find((x) => x.id === p.next_program_id) }))
+    .filter((pair): pair is { from: Program; to: Program } => !!pair.to);
+  for (const { from, to } of linkedPairs) {
+    const conv = computeConversion(from.id, to.id, attendance);
     if (conv.fromCount >= 3 && (!bestConversion || conv.rate > bestConversion.rate)) {
-      bestConversion = { from: programs[i].title, to: programs[i + 1].title, rate: conv.rate };
+      bestConversion = { from: from.title, to: to.title, rate: conv.rate };
     }
   }
   if (bestConversion && bestConversion.rate > 0) {
