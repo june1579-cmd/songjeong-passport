@@ -23,9 +23,21 @@ function JoinPageInner() {
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set()); // 이번에 새로 추가로 고르는 회차
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [mySchedule, setMySchedule] = useState<{ program_id: string; session_date: string; start_time: string; end_time: string }[]>([]);
 
   const isFixed = program?.session_selection_mode === "fixed";
   const maxSelectable = program?.max_selectable_sessions ?? null;
+
+  // 다른 프로그램에 이미 확정된 회차와 날짜·시간이 겹치는지 확인
+  const conflictsWithSchedule = (s: Session) => {
+    return mySchedule.some((entry) => {
+      if (entry.program_id === programId) return false; // 같은 프로그램끼리는 겹침 체크 대상 아님
+      if (entry.session_date !== s.session_date) return false;
+      const sStart = s.start_time ?? "00:00:00";
+      const sEnd = s.end_time ?? "23:59:59";
+      return sStart < entry.end_time && entry.start_time < sEnd;
+    });
+  };
 
   useEffect(() => {
     supabase.from("programs").select("*").eq("id", programId).single().then(({ data }) => setProgram(data));
@@ -50,6 +62,10 @@ function JoinPageInner() {
       const participant = (data as Participant) ?? null;
       setMe(participant);
       if (!participant) { setExistingRegistration(null); return; }
+
+      supabase.rpc("rpc_get_my_schedule", { p_participant_id: participant.id }).then(({ data: schedule }) => {
+        setMySchedule(schedule ?? []);
+      });
 
       // 이미 이 프로그램에 신청한 적이 있는지, 있다면 어떤 회차를 골랐었는지 확인 —
       // 단, 취소/미선정된 신청은 "이미 신청됨"으로 취급하지 않는다(다시 처음부터 신청 가능해야 함).
@@ -83,13 +99,20 @@ function JoinPageInner() {
   const cohortFull = isFixed && program?.capacity !== null && program !== null && cohortCount >= (program.capacity ?? Infinity);
   const alreadyFullyRegistered = isFixed && !!existingRegistration;
   const totalSelectedCount = alreadySelectedIds.size + selectedSessionIds.size;
+  const fixedScheduleConflict = isFixed && !alreadyFullyRegistered && sessions.some((s) => conflictsWithSchedule(s));
 
   const canSubmit =
-    !!channel && !cohortFull && !alreadyFullyRegistered &&
+    !!channel && !cohortFull && !alreadyFullyRegistered && !fixedScheduleConflict &&
     (isFixed || sessions.length === 0 || selectedSessionIds.size > 0);
 
   const submit = async () => {
     if (!canSubmit || !me || !program) return;
+    // 제출 직전 한 번 더 확인 (화면이 오래 열려있던 사이 다른 프로그램에 신청했을 수도 있음)
+    const sessionsToCheck = isFixed ? sessions : sessions.filter((s) => selectedSessionIds.has(s.id));
+    if (sessionsToCheck.some((s) => conflictsWithSchedule(s))) {
+      setError("다른 프로그램과 일정이 겹쳐서 신청할 수 없어요. 화면을 새로고침해주세요.");
+      return;
+    }
     setSaving(true);
     setError("");
     const { data: registrationId, error: regErr } = await supabase.rpc("rpc_create_registration", {
@@ -159,6 +182,11 @@ function JoinPageInner() {
                   모집 인원 {cohortCount}/{program.capacity}명{cohortFull && <span className="text-coralDark font-medium"> · 정원이 찼어요</span>}
                 </p>
               )}
+              {fixedScheduleConflict && (
+                <p className="text-xs text-coralDark font-medium mt-2">
+                  이미 신청하신 다른 프로그램과 회차 일정이 겹쳐서 이 프로그램은 신청할 수 없어요.
+                </p>
+              )}
               <div className="mt-2 space-y-1">
                 {sessions.map((s) => (
                   <div key={s.id} className="text-[11px] text-muted flex justify-between">
@@ -181,9 +209,10 @@ function JoinPageInner() {
                   const count = sessionCounts[s.id] ?? 0;
                   const full = s.capacity !== null && count >= s.capacity;
                   const isAlready = alreadySelectedIds.has(s.id);
+                  const conflict = !isAlready && conflictsWithSchedule(s);
                   const checked = isAlready || selectedSessionIds.has(s.id);
                   const limitReached = maxSelectable !== null && totalSelectedCount >= maxSelectable && !checked;
-                  const disabled = isAlready || ((full || limitReached) && !checked);
+                  const disabled = isAlready || conflict || ((full || limitReached) && !checked);
                   return (
                     <label
                       key={s.id}
@@ -195,11 +224,11 @@ function JoinPageInner() {
                         <input type="checkbox" checked={checked} disabled={isAlready || disabled} onChange={() => toggleSession(s.id)} />
                         <div>
                           <div className="text-sm font-medium text-ink">{s.session_label}</div>
-                          <div className="text-xs text-muted">{s.session_date}</div>
+                          <div className="text-xs text-muted">{s.session_date}{s.start_time ? ` · ${s.start_time.slice(0, 5)}~${s.end_time?.slice(0, 5)}` : ""}</div>
                         </div>
                       </div>
-                      <span className={`text-[11px] flex-shrink-0 ${isAlready ? "text-seafoam font-medium" : "text-muted"}`}>
-                        {isAlready ? "신청 완료" : s.capacity !== null ? (full ? "마감" : `정원 ${s.capacity}명 중 ${count}명`) : "정원 제한 없음"}
+                      <span className={`text-[11px] flex-shrink-0 text-right whitespace-pre-line ${isAlready ? "text-seafoam font-medium" : conflict ? "text-coralDark font-medium" : "text-muted"}`}>
+                        {isAlready ? "신청 완료" : conflict ? "다른 프로그램과\n시간 겹침" : s.capacity !== null ? (full ? "마감" : `정원 ${s.capacity}명 중 ${count}명`) : "정원 제한 없음"}
                       </span>
                     </label>
                   );

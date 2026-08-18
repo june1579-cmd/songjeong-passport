@@ -665,3 +665,18 @@ begin
 end;
 $$;
 grant execute on function rpc_create_registration(uuid, text, text) to anon;
+
+-- =================================================================
+-- 확장 21: 프로그램 간 시간 겹침 방지를 위한 내 전체 일정 조회
+-- =================================================================
+create or replace function rpc_get_my_schedule(p_participant_id uuid)
+returns table (program_id text, session_id uuid, session_date date, start_time time, end_time time)
+language sql security definer set search_path = public as $$
+  select s.program_id, s.id as session_id, s.session_date, s.start_time, s.end_time
+  from registration_sessions rs
+  join sessions s on s.id = rs.session_id
+  join registrations r on r.id = rs.registration_id
+  where rs.participant_id = p_participant_id
+    and r.status not in ('cancelled', 'rejected');
+$$;
+grant execute on function rpc_get_my_schedule(uuid) to anon;
