@@ -208,26 +208,24 @@ export default function ApplicationsPage() {
           <table className="w-full text-xs border-collapse" style={{ minWidth: 720 }}>
             <colgroup>
               <col style={{ width: 36 }} />
-              <col style={{ width: 150 }} />
+              <col style={{ width: 190 }} />
               <col style={{ width: 132 }} />
               <col style={{ width: 64 }} />
               <col style={{ width: 128 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 68 }} />
-              <col style={{ width: 110 }} />
             </colgroup>
             <thead>
               <tr className="bg-sand text-navy sticky top-0 z-10">
                 <th className="p-2.5 text-center align-middle">
                   <input type="checkbox" checked={selectedIds.size > 0 && selectedIds.size === filtered.length} onChange={toggleAll} />
                 </th>
-                <th className="text-left p-2.5 font-semibold tracking-tight">이름</th>
+                <th className="text-left p-2.5 font-semibold tracking-tight">이름 / 신청 회차</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">전화번호</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">연령대</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">거주지역</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">유입경로</th>
                 <th className="text-right p-2.5 font-semibold tracking-tight">기존참여</th>
-                <th className="text-left p-2.5 font-semibold tracking-tight">신청 회차</th>
               </tr>
             </thead>
             <tbody>
@@ -242,8 +240,11 @@ export default function ApplicationsPage() {
                   </td>
                   <td className="p-2.5 align-middle whitespace-nowrap">
                     <div className="flex flex-col gap-0.5">
-                      <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
-                      <span className="font-medium text-ink">{r.participant.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                        <span className="font-medium text-ink">{r.participant.name}</span>
+                      </div>
+                      <span className="text-[10px] text-navy">📅 {r.sessionLabels}</span>
                       {r.participant.guardian_name && (
                         <span className="text-[10px] text-coralDark">보호자 {r.participant.guardian_name} · {r.participant.guardian_phone}</span>
                       )}
@@ -260,9 +261,6 @@ export default function ApplicationsPage() {
                     {r.registration.acquisition_channel}
                   </td>
                   <td className="p-2.5 align-middle text-right text-ink" style={{ fontVariantNumeric: "tabular-nums" }}>{r.priorVisits}</td>
-                  <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.sessionLabels}>
-                    {r.sessionLabels}
-                  </td>
                 </tr>
               ))}
             </tbody>

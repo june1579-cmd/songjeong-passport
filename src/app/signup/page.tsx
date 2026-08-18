@@ -78,7 +78,7 @@ function SignupInner() {
     setError("");
 
     const phone4 = phoneRaw.slice(-4);
-    const { data: existingId } = await supabase.rpc("rpc_check_phone_exists", { p_phone_number: phoneRaw });
+    const { data: existingId } = await supabase.rpc("rpc_check_existing_participant", { p_phone_number: phoneRaw, p_name: name.trim() });
     if (existingId) {
       setStoredParticipantId(existingId as string);
       setSaving(false);
@@ -100,7 +100,7 @@ function SignupInner() {
     if (insertErr) {
       // 아주 드물게 거의 동시에 같은 번호로 가입 시도가 겹친 경우 — 새로 만들지 않고 기존 계정으로 로그인 처리
       if (insertErr.message.includes("duplicate") || insertErr.message.includes("unique")) {
-        const { data: retryId } = await supabase.rpc("rpc_check_phone_exists", { p_phone_number: phoneRaw });
+        const { data: retryId } = await supabase.rpc("rpc_check_existing_participant", { p_phone_number: phoneRaw, p_name: name.trim() });
         if (retryId) {
           setStoredParticipantId(retryId as string);
           setSaving(false);

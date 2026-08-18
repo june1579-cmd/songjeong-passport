@@ -680,3 +680,47 @@ language sql security definer set search_path = public as $$
     and r.status not in ('cancelled', 'rejected');
 $$;
 grant execute on function rpc_get_my_schedule(uuid) to anon;
+
+-- =================================================================
+-- 확장 22: 보호자 1명(같은 전화번호) + 자녀 여러 명 가입 지원
+-- =================================================================
+-- 지금까지는 phone_number 하나에 참여자 한 명만 허용되어, 같은 부모 번호로
+-- 자녀 여러 명을 각각 가입시킬 수 없었다(둘째부터는 첫째 계정으로 로그인되어버림).
+-- "전화번호+이름"이 둘 다 같을 때만 "이미 있는 계정"으로 보고, 이름이 다르면
+-- (형제자매) 같은 번호를 써도 별도 계정을 만들 수 있게 바꾼다.
+alter table participants drop constraint if exists participants_phone_number_key;
+drop index if exists participants_phone_number_key;
+create unique index if not exists participants_phone_name_key on participants (phone_number, name);
+
+-- 이름까지 함께 확인해서, 완전히 동일한 사람만 "이미 가입됨"으로 판단
+create or replace function rpc_check_existing_participant(p_phone_number text, p_name text)
+returns uuid
+language sql security definer set search_path = public as $$
+  select id from participants where phone_number = p_phone_number and name = p_name limit 1;
+$$;
+grant execute on function rpc_check_existing_participant(text, text) to anon;
+
+-- 참여자 생성도 "전화번호+이름" 조합 충돌만 방지하도록 조정
+create or replace function rpc_create_participant(
+  p_name text, p_phone4 text, p_phone_number text, p_age_group text, p_residence_area text,
+  p_residence_district text default null, p_residence_dong text default null,
+  p_guardian_name text default null, p_guardian_phone text default null
+)
+returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  new_id uuid;
+begin
+  insert into participants (name, phone4, phone_number, age_group, residence_area, residence_district, residence_dong, guardian_name, guardian_phone, privacy_consent_at)
+  values (p_name, p_phone4, p_phone_number, p_age_group, p_residence_area, p_residence_district, p_residence_dong, p_guardian_name, p_guardian_phone, now())
+  on conflict (phone_number, name) do nothing
+  returning id into new_id;
+
+  if new_id is null then
+    select id into new_id from participants where phone_number = p_phone_number and name = p_name;
+  end if;
+
+  return new_id;
+end;
+$$;
+grant execute on function rpc_create_participant(text, text, text, text, text, text, text, text, text) to anon;
