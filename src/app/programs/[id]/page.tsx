@@ -101,7 +101,9 @@ export default function ProgramDetailPage() {
   const cardStatus = computeCardStatus(program, totalCapacity ?? null, totalRegCount, registration, myAttCount);
   const remaining = remainingSpots(totalCapacity ?? null, totalRegCount);
   const dateRange = sessions.length ? `${sessions[0].session_date} ~ ${sessions[sessions.length - 1].session_date}` : "";
-  const canApply = !registration && cardStatus !== "full" && cardStatus !== "closed" && cardStatus !== "cancelled";
+  // 신청 기록이 아예 없거나, 예전에 취소/미선정됐던 경우엔 다시 신청할 수 있어야 한다.
+  const canReapply = !registration || registration.status === "cancelled" || registration.status === "rejected";
+  const canApply = canReapply && cardStatus !== "full" && cardStatus !== "closed" && cardStatus !== "cancelled";
   // 이미 신청은 했지만(예: 3차만 신청) "회차 자유 선택" 프로그램이고 최대 개수를 아직 다 채우지 않았다면 더 신청할 수 있게 한다.
   const canAddMoreSessions =
     !!registration &&

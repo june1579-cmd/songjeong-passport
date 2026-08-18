@@ -52,14 +52,14 @@ function JoinPageInner() {
       if (!participant) { setExistingRegistration(null); return; }
 
       // 이미 이 프로그램에 신청한 적이 있는지, 있다면 어떤 회차를 골랐었는지 확인 —
-      // 이걸 놓치면(예전 버그) 이미 고른 회차를 다시 체크한 채로 저장 시도하다가
-      // 충돌로 전체 저장이 조용히 실패하는 문제가 있었다.
+      // 단, 취소/미선정된 신청은 "이미 신청됨"으로 취급하지 않는다(다시 처음부터 신청 가능해야 함).
       supabase.rpc("rpc_get_my_registration_for_program", { p_participant_id: participant.id, p_program_id: programId }).then(({ data: regs }) => {
         const reg = (regs as Registration[] | null)?.[0] ?? null;
-        setExistingRegistration(reg);
-        if (reg) {
-          setChannel(reg.acquisition_channel);
-          supabase.from("registration_sessions").select("session_id").eq("registration_id", reg.id).then(({ data: rs }) => {
+        const isActive = reg && reg.status !== "cancelled" && reg.status !== "rejected";
+        setExistingRegistration(isActive ? reg : null);
+        if (isActive) {
+          setChannel(reg!.acquisition_channel);
+          supabase.from("registration_sessions").select("session_id").eq("registration_id", reg!.id).then(({ data: rs }) => {
             setAlreadySelectedIds(new Set((rs ?? []).map((r: { session_id: string }) => r.session_id)));
           });
         }

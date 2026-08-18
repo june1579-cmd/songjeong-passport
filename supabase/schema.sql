@@ -634,3 +634,34 @@ language sql security definer set search_path = public as $$
   limit 1;
 $$;
 grant execute on function rpc_get_my_participant(uuid) to anon;
+
+-- =================================================================
+-- 확장 20: 취소/미선정된 신청을 다시 신청할 때 상태가 되돌아가지 않던 문제 수정
+-- =================================================================
+create or replace function rpc_create_registration(p_participant_id uuid, p_program_id text, p_acquisition_channel text)
+returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  reg_id uuid;
+  reg_status text;
+begin
+  insert into registrations (participant_id, program_id, acquisition_channel, status)
+  values (p_participant_id, p_program_id, p_acquisition_channel, 'applied')
+  on conflict (participant_id, program_id) do nothing
+  returning id into reg_id;
+
+  if reg_id is null then
+    select id, status into reg_id, reg_status from registrations where participant_id = p_participant_id and program_id = p_program_id;
+    -- 예전에 취소/미선정됐던 신청을 다시 신청하는 경우 상태를 '신청'으로 되돌리고,
+    -- 예전에 골랐던 회차 선택은 지워서 깨끗하게 새로 고를 수 있게 한다.
+    if reg_status in ('cancelled', 'rejected') then
+      update registrations set status = 'applied', acquisition_channel = p_acquisition_channel, registered_at = now()
+      where id = reg_id;
+      delete from registration_sessions where registration_id = reg_id;
+    end if;
+  end if;
+
+  return reg_id;
+end;
+$$;
+grant execute on function rpc_create_registration(uuid, text, text) to anon;
