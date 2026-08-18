@@ -21,6 +21,14 @@ const STATUS_TONE: Record<ApplicationStatus, "sand" | "seafoam" | "coral"> = {
   cancelled: "sand",
 };
 
+const STATUS_STRIPE: Record<ApplicationStatus, string> = {
+  applied: "#D9CBA3",
+  selected: "#4E9C82",
+  waitlisted: "#EC7A4E",
+  rejected: "#C9BFA8",
+  cancelled: "#C9BFA8",
+};
+
 async function api(path: string, options?: RequestInit) {
   const res = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...options?.headers } });
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? "요청 실패");
@@ -199,14 +207,13 @@ export default function ApplicationsPage() {
           <table className="w-full text-xs border-collapse" style={{ minWidth: 720 }}>
             <colgroup>
               <col style={{ width: 36 }} />
-              <col style={{ width: 96 }} />
+              <col style={{ width: 150 }} />
               <col style={{ width: 132 }} />
               <col style={{ width: 64 }} />
               <col style={{ width: 128 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 68 }} />
               <col style={{ width: 110 }} />
-              <col style={{ width: 108 }} />
             </colgroup>
             <thead>
               <tr className="bg-sand text-navy sticky top-0 z-10">
@@ -220,7 +227,6 @@ export default function ApplicationsPage() {
                 <th className="text-left p-2.5 font-semibold tracking-tight">유입경로</th>
                 <th className="text-right p-2.5 font-semibold tracking-tight">기존참여</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">신청 회차</th>
-                <th className="text-left p-2.5 font-semibold tracking-tight">상태</th>
               </tr>
             </thead>
             <tbody>
@@ -228,11 +234,17 @@ export default function ApplicationsPage() {
                 <tr
                   key={r.registration.id}
                   className={`border-t border-line hover:bg-sandLight transition-colors ${selectedIds.has(r.registration.id) ? "bg-seafoamLight/40" : i % 2 === 1 ? "bg-sandLight/40" : ""}`}
+                  style={{ boxShadow: `inset 3px 0 0 ${STATUS_STRIPE[r.registration.status]}` }}
                 >
                   <td className="p-2.5 text-center align-middle">
                     <input type="checkbox" checked={selectedIds.has(r.registration.id)} onChange={() => toggleOne(r.registration.id)} />
                   </td>
-                  <td className="p-2.5 align-middle font-medium text-ink whitespace-nowrap">{r.participant.name}</td>
+                  <td className="p-2.5 align-middle whitespace-nowrap">
+                    <div className="flex flex-col gap-0.5">
+                      <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                      <span className="font-medium text-ink">{r.participant.name}</span>
+                    </div>
+                  </td>
                   <td className="p-2.5 align-middle whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
                     {r.participant.phone_number ?? `****-****-${r.participant.phone4}`}
                   </td>
@@ -246,9 +258,6 @@ export default function ApplicationsPage() {
                   <td className="p-2.5 align-middle text-right text-ink" style={{ fontVariantNumeric: "tabular-nums" }}>{r.priorVisits}</td>
                   <td className="p-2.5 align-middle text-muted whitespace-nowrap overflow-hidden text-ellipsis" title={r.sessionLabels}>
                     {r.sessionLabels}
-                  </td>
-                  <td className="p-2.5 align-middle whitespace-nowrap">
-                    <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
                   </td>
                 </tr>
               ))}
