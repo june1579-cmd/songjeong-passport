@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Photo, Program } from "@/lib/types";
+import { isVideoUrl } from "@/lib/media";
+import { Play } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Lightbox from "@/components/Lightbox";
 
@@ -58,7 +60,20 @@ export default function GalleryPage() {
           const prog = ph.program_id ? programMap[ph.program_id] : null;
           return (
             <button key={ph.id} onClick={() => setLightboxSrc(ph.image_url)} className="rounded-xl overflow-hidden border border-line bg-white text-left">
-              <img src={ph.image_url} alt={ph.caption ?? ""} className="w-full h-32 object-cover" />
+              <div className="relative">
+                {isVideoUrl(ph.image_url) ? (
+                  <video src={ph.image_url} className="w-full h-32 object-cover bg-black" muted playsInline />
+                ) : (
+                  <img src={ph.image_url} alt={ph.caption ?? ""} className="w-full h-32 object-cover" />
+                )}
+                {isVideoUrl(ph.image_url) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
+                      <Play size={14} className="text-navy ml-0.5" fill="currentColor" />
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="p-2">
                 {prog && <p className="text-[10px] text-muted">{prog.emoji} {prog.title}</p>}
                 {ph.caption && <p className="text-xs text-ink mt-0.5 line-clamp-2">{ph.caption}</p>}

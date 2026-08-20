@@ -8,6 +8,7 @@ import { getStoredParticipantId } from "@/lib/participant-session";
 import { Program, Session, Participant, Registration, Attendance, Photo, Review, APPLICATION_STATUS_LABEL } from "@/lib/types";
 import { computeCardStatus, remainingSpots } from "@/lib/program-status";
 import { categoryColor } from "@/lib/category-colors";
+import { isVideoUrl } from "@/lib/media";
 import TopBar from "@/components/TopBar";
 import Pill from "@/components/Pill";
 import StatusBadge from "@/components/StatusBadge";
@@ -202,7 +203,11 @@ export default function ProgramDetailPage() {
             <div className="grid grid-cols-2 gap-2">
               {photos.map((ph) => (
                 <button key={ph.id} onClick={() => setLightboxSrc(ph.image_url)} className="text-left">
-                  <img src={ph.image_url} alt={ph.caption ?? ""} className="w-full h-28 object-cover rounded-lg border border-line" />
+                  {isVideoUrl(ph.image_url) ? (
+                    <video src={ph.image_url} className="w-full h-28 object-cover rounded-lg border border-line bg-black" muted playsInline />
+                  ) : (
+                    <img src={ph.image_url} alt={ph.caption ?? ""} className="w-full h-28 object-cover rounded-lg border border-line" />
+                  )}
                   {ph.caption && <p className="text-[10px] text-muted mt-1 truncate">{ph.caption}</p>}
                 </button>
               ))}
