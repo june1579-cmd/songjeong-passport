@@ -11,6 +11,7 @@ interface Row {
   participant: Participant;
   priorVisits: number;
   sessionLabels: string;
+  sessionIds: string[];
 }
 
 const STATUS_TONE: Record<ApplicationStatus, "sand" | "seafoam" | "coral"> = {
@@ -41,6 +42,7 @@ export default function ApplicationsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<"all" | ApplicationStatus>("all");
+  const [viewMode, setViewMode] = useState<"table" | "session">("table");
   const [notifications, setNotifications] = useState<(Notification & { participant_name: string })[]>([]);
   const [attendanceData, setAttendanceData] = useState<{ participant_id: string; session_id: string; checked_in_at: string }[]>([]);
   const [sessionsData, setSessionsData] = useState<{ id: string; session_label: string; session_date: string }[]>([]);
@@ -55,9 +57,12 @@ export default function ApplicationsPage() {
       const sessionMap: Record<string, string> = {};
       (sessions ?? []).forEach((s: { id: string; session_label: string }) => (sessionMap[s.id] = s.session_label));
       const labelsByRegistration: Record<string, string[]> = {};
+      const sessionIdsByRegistration: Record<string, string[]> = {};
       (registrationSessions ?? []).forEach((rs: { registration_id: string; session_id: string }) => {
         labelsByRegistration[rs.registration_id] = labelsByRegistration[rs.registration_id] ?? [];
+        sessionIdsByRegistration[rs.registration_id] = sessionIdsByRegistration[rs.registration_id] ?? [];
         if (sessionMap[rs.session_id]) labelsByRegistration[rs.registration_id].push(sessionMap[rs.session_id]);
+        sessionIdsByRegistration[rs.registration_id].push(rs.session_id);
       });
       const list: Row[] = (registrations ?? [])
         .map((r: Registration) => {
@@ -65,7 +70,7 @@ export default function ApplicationsPage() {
           if (!participant) return null;
           const labels = labelsByRegistration[r.id];
           const sessionLabels = labels?.length ? labels.join(", ") : "-";
-          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0, sessionLabels };
+          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0, sessionLabels, sessionIds: sessionIdsByRegistration[r.id] ?? [] };
         })
         .filter(Boolean) as Row[];
       setRows(list);
@@ -80,6 +85,16 @@ export default function ApplicationsPage() {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.registration.status === filter);
+
+  // 회차별 보기 — 참여자가 여러 회차에 신청했으면 각 회차 그룹에 각각 나타난다
+  const bySession = sessionsData
+    .slice()
+    .sort((a, b) => a.session_date.localeCompare(b.session_date))
+    .map((s) => ({
+      session: s,
+      rows: filtered.filter((r) => r.sessionIds.includes(s.id)),
+    }));
+  const noSessionRows = filtered.filter((r) => r.sessionIds.length === 0);
 
   const toggleAll = () => {
     if (selectedIds.size === filtered.length) setSelectedIds(new Set());
@@ -182,6 +197,20 @@ export default function ApplicationsPage() {
         ))}
       </div>
 
+      {sessionsData.length > 0 && (
+        <div className="flex gap-2 mb-3">
+          {([["table", "표로 보기"], ["session", "회차별로 보기"]] as ["table" | "session", string][]).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-full ${viewMode === mode ? "bg-navy text-white" : "border border-line text-navy bg-white"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-3">
         <button onClick={() => bulkUpdate("selected")} disabled={!selectedIds.size} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg bg-seafoam text-white disabled:opacity-30">
           <Check size={13} /> 선정 처리
@@ -203,6 +232,7 @@ export default function ApplicationsPage() {
         </button>
       </div>
 
+      {viewMode === "table" && (
       <div className="rounded-xl border border-line overflow-hidden bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse" style={{ minWidth: 720 }}>
@@ -268,6 +298,52 @@ export default function ApplicationsPage() {
         </div>
         {filtered.length === 0 && <p className="text-xs text-muted p-4">해당하는 신청자가 없습니다.</p>}
       </div>
+      )}
+
+      {viewMode === "session" && (
+        <div className="space-y-4">
+          {bySession.map(({ session, rows: sessionRows }) => (
+            <div key={session.id}>
+              <p className="text-xs font-semibold text-navy tracking-tight px-1 mb-2">
+                {session.session_label} <span className="text-muted font-normal">· {session.session_date} · {sessionRows.length}명</span>
+              </p>
+              <div className="rounded-xl border border-line bg-white divide-y divide-line">
+                {sessionRows.map((r) => (
+                  <div key={r.registration.id} className="p-3 flex items-center justify-between gap-2" style={{ boxShadow: `inset 3px 0 0 ${STATUS_STRIPE[r.registration.status]}` }}>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-ink">{r.participant.name}</span>
+                        <span className="text-[11px] text-muted">{r.participant.age_group}</span>
+                      </div>
+                      <p className="text-[11px] text-muted mt-0.5" style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {r.participant.phone_number ?? `****-****-${r.participant.phone4}`}
+                        {r.participant.guardian_name && <span className="text-coralDark"> · 보호자 {r.participant.guardian_name} {r.participant.guardian_phone}</span>}
+                      </p>
+                    </div>
+                    <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                  </div>
+                ))}
+                {sessionRows.length === 0 && <p className="text-xs text-muted p-3">이 회차에 신청한 참여자가 없습니다.</p>}
+              </div>
+            </div>
+          ))}
+          {noSessionRows.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-navy tracking-tight px-1 mb-2">
+                회차 미지정 <span className="text-muted font-normal">· {noSessionRows.length}명</span>
+              </p>
+              <div className="rounded-xl border border-line bg-white divide-y divide-line">
+                {noSessionRows.map((r) => (
+                  <div key={r.registration.id} className="p-3 flex items-center justify-between gap-2" style={{ boxShadow: `inset 3px 0 0 ${STATUS_STRIPE[r.registration.status]}` }}>
+                    <span className="text-sm font-medium text-ink">{r.participant.name}</span>
+                    <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {notifications.length > 0 && (
         <div className="mt-5">
