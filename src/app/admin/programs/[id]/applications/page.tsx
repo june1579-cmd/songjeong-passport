@@ -86,6 +86,29 @@ export default function ApplicationsPage() {
 
   const filtered = filter === "all" ? rows : rows.filter((r) => r.registration.status === filter);
 
+  const markNoShow = async (participantId: string, programId: string, sessionId: string) => {
+    if (!window.confirm("이 참여자를 이 회차 노쇼로 기록할까요? 기록이 누적되면 자동으로 참여 제한(블랙리스트) 처리돼요.")) return;
+    try {
+      const result = await api("/api/admin/no-show", { method: "POST", body: JSON.stringify({ participantId, programId, sessionId }) });
+      if (result.autoBlacklisted) window.alert("노쇼 누적으로 이 참여자는 자동으로 참여 제한 처리되었어요.");
+      load();
+    } catch (e: any) {
+      setError(e.message ?? "노쇼 처리 중 문제가 발생했습니다.");
+    }
+  };
+
+  // 노쇼 누적 여부와 상관없이 바로 참여 제한을 걸거나 풀 수 있는 버튼 (확인창 없이 즉시 반영)
+  const toggleBlacklist = async (participantId: string, current: boolean) => {
+    try {
+      await api("/api/admin/participants", { method: "PATCH", body: JSON.stringify({ id: participantId, patch: { is_blacklisted: !current } }) });
+      load();
+    } catch (e: any) {
+      setError(e.message ?? "처리 중 문제가 발생했습니다.");
+    }
+  };
+  const today = new Date().toISOString().slice(0, 10);
+
+
   // 회차별 보기 — 참여자가 여러 회차에 신청했으면 각 회차 그룹에 각각 나타난다
   const bySession = sessionsData
     .slice()
@@ -273,11 +296,18 @@ export default function ApplicationsPage() {
                       <div className="flex items-center gap-1.5">
                         <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
                         <span className="font-medium text-ink">{r.participant.name}</span>
+                        {r.participant.is_blacklisted && <Pill tone="coral">참여제한</Pill>}
                       </div>
                       <span className="text-[10px] text-navy">📅 {r.sessionLabels}</span>
                       {r.participant.guardian_name && (
                         <span className="text-[10px] text-coralDark">보호자 {r.participant.guardian_name} · {r.participant.guardian_phone}</span>
                       )}
+                      <button
+                        onClick={() => toggleBlacklist(r.participant.id, r.participant.is_blacklisted)}
+                        className={`text-[10px] font-medium mt-0.5 self-start px-1.5 py-0.5 rounded ${r.participant.is_blacklisted ? "text-seafoam" : "text-coralDark"}`}
+                      >
+                        {r.participant.is_blacklisted ? "제한 해제" : "참여 제한 지정"}
+                      </button>
                     </div>
                   </td>
                   <td className="p-2.5 align-middle whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -308,21 +338,43 @@ export default function ApplicationsPage() {
                 {session.session_label} <span className="text-muted font-normal">· {session.session_date} · {sessionRows.length}명</span>
               </p>
               <div className="rounded-xl border border-line bg-white divide-y divide-line">
-                {sessionRows.map((r) => (
-                  <div key={r.registration.id} className="p-3 flex items-center justify-between gap-2" style={{ boxShadow: `inset 3px 0 0 ${STATUS_STRIPE[r.registration.status]}` }}>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-medium text-ink">{r.participant.name}</span>
-                        <span className="text-[11px] text-muted">{r.participant.age_group}</span>
+                {sessionRows.map((r) => {
+                  const checkedIn = attendanceData.some((a) => a.participant_id === r.participant.id && a.session_id === session.id);
+                  const isPast = session.session_date < today;
+                  const showNoShowButton = isPast && !checkedIn && r.registration.status === "selected";
+                  return (
+                    <div key={r.registration.id} className="p-3 flex items-center justify-between gap-2" style={{ boxShadow: `inset 3px 0 0 ${STATUS_STRIPE[r.registration.status]}` }}>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm font-medium text-ink">{r.participant.name}</span>
+                          <span className="text-[11px] text-muted">{r.participant.age_group}</span>
+                          {r.participant.is_blacklisted && <Pill tone="coral">참여제한</Pill>}
+                          {!r.participant.is_blacklisted && r.participant.no_show_count > 0 && (
+                            <span className="text-[10px] text-coralDark">노쇼 {r.participant.no_show_count}회</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted mt-0.5" style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {r.participant.phone_number ?? `****-****-${r.participant.phone4}`}
+                          {r.participant.guardian_name && <span className="text-coralDark"> · 보호자 {r.participant.guardian_name} {r.participant.guardian_phone}</span>}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-muted mt-0.5" style={{ fontVariantNumeric: "tabular-nums" }}>
-                        {r.participant.phone_number ?? `****-****-${r.participant.phone4}`}
-                        {r.participant.guardian_name && <span className="text-coralDark"> · 보호자 {r.participant.guardian_name} {r.participant.guardian_phone}</span>}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => toggleBlacklist(r.participant.id, r.participant.is_blacklisted)}
+                          className={`text-[11px] font-medium px-2 py-1.5 rounded-lg border ${r.participant.is_blacklisted ? "border-seafoam text-seafoam" : "border-coralDark text-coralDark"}`}
+                        >
+                          {r.participant.is_blacklisted ? "제한 해제" : "참여 제한"}
+                        </button>
+                        {showNoShowButton && (
+                          <button onClick={() => markNoShow(r.participant.id, program!.id, session.id)} className="text-[11px] font-medium px-2 py-1.5 rounded-lg border border-coralDark text-coralDark">
+                            노쇼 처리
+                          </button>
+                        )}
+                        <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                      </div>
                     </div>
-                    <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
-                  </div>
-                ))}
+                  );
+                })}
                 {sessionRows.length === 0 && <p className="text-xs text-muted p-3">이 회차에 신청한 참여자가 없습니다.</p>}
               </div>
             </div>
@@ -335,8 +387,19 @@ export default function ApplicationsPage() {
               <div className="rounded-xl border border-line bg-white divide-y divide-line">
                 {noSessionRows.map((r) => (
                   <div key={r.registration.id} className="p-3 flex items-center justify-between gap-2" style={{ boxShadow: `inset 3px 0 0 ${STATUS_STRIPE[r.registration.status]}` }}>
-                    <span className="text-sm font-medium text-ink">{r.participant.name}</span>
-                    <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium text-ink">{r.participant.name}</span>
+                      {r.participant.is_blacklisted && <Pill tone="coral">참여제한</Pill>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => toggleBlacklist(r.participant.id, r.participant.is_blacklisted)}
+                        className={`text-[11px] font-medium px-2 py-1.5 rounded-lg border ${r.participant.is_blacklisted ? "border-seafoam text-seafoam" : "border-coralDark text-coralDark"}`}
+                      >
+                        {r.participant.is_blacklisted ? "제한 해제" : "참여 제한"}
+                      </button>
+                      <Pill tone={STATUS_TONE[r.registration.status]}>{APPLICATION_STATUS_LABEL[r.registration.status]}</Pill>
+                    </div>
                   </div>
                 ))}
               </div>

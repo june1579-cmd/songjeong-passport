@@ -66,6 +66,8 @@ export interface Participant {
   residence_dong: string | null;
   guardian_name: string | null;
   guardian_phone: string | null;
+  is_blacklisted: boolean;
+  no_show_count: number;
   privacy_consent_at: string | null;
   is_archived: boolean;
   created_at: string;

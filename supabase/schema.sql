@@ -724,3 +724,46 @@ begin
 end;
 $$;
 grant execute on function rpc_create_participant(text, text, text, text, text, text, text, text, text) to anon;
+
+-- =================================================================
+-- 확장 23: 당일 노쇼 기록 및 블랙리스트
+-- =================================================================
+alter table participants add column if not exists is_blacklisted boolean not null default false;
+alter table participants add column if not exists no_show_count int not null default 0;
+
+create table if not exists no_shows (
+  id uuid primary key default gen_random_uuid(),
+  participant_id uuid not null references participants(id) on delete cascade,
+  program_id text not null references programs(id) on delete cascade,
+  session_id uuid references sessions(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_no_shows_participant on no_shows(participant_id);
+-- 관리자 전용 서버 API(서비스 롤 키)로만 접근 — 익명 정책은 두지 않는다.
+alter table no_shows enable row level security;
+
+-- 신청/회원가입 화면에서 "내가 블랙리스트인지"만 확인할 수 있게 (그 외 정보는 노출 안 함)
+create or replace function rpc_am_i_blacklisted(p_participant_id uuid)
+returns boolean
+language sql security definer set search_path = public as $$
+  select is_blacklisted from participants where id = p_participant_id;
+$$;
+grant execute on function rpc_am_i_blacklisted(uuid) to anon;
+
+-- rpc_get_my_participant에 블랙리스트 여부 포함 (반환 타입이 바뀌므로 drop 후 재생성 필요)
+drop function if exists rpc_get_my_participant(uuid);
+create function rpc_get_my_participant(p_id uuid)
+returns table (
+  id uuid, name text, age_group text, residence_area text, phone_number text, phone4 text,
+  privacy_consent_at timestamptz, is_archived boolean, created_at timestamptz,
+  residence_district text, residence_dong text, guardian_name text, guardian_phone text,
+  is_blacklisted boolean
+)
+language sql security definer set search_path = public as $$
+  select id, name, age_group, residence_area, phone_number, phone4, privacy_consent_at, is_archived, created_at,
+         residence_district, residence_dong, guardian_name, guardian_phone, is_blacklisted
+  from participants
+  where id = p_id
+  limit 1;
+$$;
+grant execute on function rpc_get_my_participant(uuid) to anon;

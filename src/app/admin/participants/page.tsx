@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Archive, ArchiveRestore, Trash2, Save, AlertTriangle } from "lucide-react";
+import { Search, Archive, ArchiveRestore, Trash2, Save, AlertTriangle, ShieldAlert, ShieldOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Participant, AGE_OPTIONS, BUSAN_DISTRICTS, APPLICATION_STATUS_LABEL, ApplicationStatus } from "@/lib/types";
 import Pill from "@/components/Pill";
@@ -108,6 +108,15 @@ export default function AdminParticipantsPage() {
     load();
   };
 
+  const toggleBlacklist = async (p: Participant) => {
+    const msg = p.is_blacklisted
+      ? `"${p.name}" 님의 참여 제한을 해제할까요?`
+      : `"${p.name}" 님을 참여 제한(블랙리스트) 처리할까요? 앞으로 새 프로그램 신청이 막혀요.`;
+    if (!window.confirm(msg)) return;
+    await api("/api/admin/participants", { method: "PATCH", body: JSON.stringify({ id: p.id, patch: { is_blacklisted: !p.is_blacklisted } }) });
+    load();
+  };
+
   const remove = async (p: Participant) => {
     if (!window.confirm(`"${p.name}" 참여자를 완전히 삭제할까요? 신청/출석/설문 등 관련 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.`)) return;
     await api("/api/admin/participants", { method: "DELETE", body: JSON.stringify({ ids: [p.id] }) });
@@ -160,9 +169,11 @@ export default function AdminParticipantsPage() {
         <div className="flex items-center gap-3">
           <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-sm font-medium text-ink">{p.name}</p>
               <span className="text-[10px] text-muted">· {p.age_group}</span>
+              {p.is_blacklisted && <Pill tone="coral">참여제한</Pill>}
+              {!p.is_blacklisted && p.no_show_count > 0 && <span className="text-[10px] text-coralDark">노쇼 {p.no_show_count}회</span>}
             </div>
             <div className="grid grid-cols-[52px_1fr] gap-x-2 gap-y-0.5 text-[11px] text-muted max-w-xs mt-1">
               <span className="text-muted/70">전화번호</span>
@@ -191,6 +202,12 @@ export default function AdminParticipantsPage() {
             <button onClick={() => startEdit(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy">수정</button>
             <button onClick={() => toggleArchive(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-navy flex items-center gap-1">
               {p.is_archived ? <><ArchiveRestore size={12} /> 복원</> : <><Archive size={12} /> 보관</>}
+            </button>
+            <button
+              onClick={() => toggleBlacklist(p)}
+              className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border flex items-center gap-1 ${p.is_blacklisted ? "border-coralDark text-coralDark bg-[#FBE4D8]" : "border-line text-navy"}`}
+            >
+              {p.is_blacklisted ? <><ShieldOff size={12} /> 제한 해제</> : <><ShieldAlert size={12} /> 참여 제한</>}
             </button>
             <button onClick={() => remove(p)} className="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-line text-coralDark">
               <Trash2 size={12} />

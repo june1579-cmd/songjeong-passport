@@ -102,7 +102,7 @@ function JoinPageInner() {
   const fixedScheduleConflict = isFixed && !alreadyFullyRegistered && sessions.some((s) => conflictsWithSchedule(s));
 
   const canSubmit =
-    !!channel && !cohortFull && !alreadyFullyRegistered && !fixedScheduleConflict &&
+    !!channel && !cohortFull && !alreadyFullyRegistered && !fixedScheduleConflict && !me?.is_blacklisted &&
     (isFixed || sessions.length === 0 || selectedSessionIds.size > 0);
 
   const submit = async () => {
@@ -161,6 +161,12 @@ function JoinPageInner() {
         <div className="flex items-center gap-1.5 text-xs font-medium text-seafoam"><CheckCircle2 size={14} /> {me?.name}님으로 신청합니다</div>
         <p className="text-sm text-muted">{program.emoji} {program.title}</p>
 
+        {me?.is_blacklisted ? (
+          <div className="rounded-xl border border-coralDark bg-[#FBE4D8] p-3.5 text-sm text-coralDark">
+            현재 참여가 제한된 계정이에요. 프로그램에 신청하실 수 없어요. 문의사항은 운영자에게 연락해주세요.
+          </div>
+        ) : (
+        <>
         {alreadyFullyRegistered && (
           <div className="rounded-xl border border-seafoam bg-seafoamLight p-3.5 text-sm text-navy">
             이미 신청 완료된 프로그램이에요. 전체 회차에 등록되어 있어요.
@@ -251,6 +257,8 @@ function JoinPageInner() {
           <button disabled={!canSubmit || saving} onClick={submit} className="w-full py-3.5 rounded-xl font-display text-white text-base bg-coral disabled:opacity-40">
             {saving ? "처리 중..." : existingRegistration ? "회차 추가하기" : "신청 완료하기"}
           </button>
+        )}
+        </>
         )}
       </div>
     </div>
