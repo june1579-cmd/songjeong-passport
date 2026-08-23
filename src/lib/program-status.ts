@@ -1,6 +1,6 @@
 import { Program, Registration, Session, Attendance } from "./types";
 
-export type CardStatus = "upcoming" | "open" | "almost_full" | "full" | "registered" | "completed" | "cancelled" | "closed";
+export type CardStatus = "upcoming" | "open" | "almost_full" | "full" | "registered" | "completed" | "cancelled" | "closed" | "in_progress";
 
 export const CARD_STATUS_LABEL: Record<CardStatus, string> = {
   upcoming: "모집예정",
@@ -11,6 +11,7 @@ export const CARD_STATUS_LABEL: Record<CardStatus, string> = {
   completed: "참여완료",
   cancelled: "취소됨",
   closed: "종료된 프로그램",
+  in_progress: "진행중",
 };
 
 export const CARD_STATUS_TONE: Record<CardStatus, "sand" | "seafoam" | "coral" | "amber" | "navy"> = {
@@ -22,6 +23,7 @@ export const CARD_STATUS_TONE: Record<CardStatus, "sand" | "seafoam" | "coral" |
   completed: "seafoam",
   cancelled: "sand",
   closed: "sand",
+  in_progress: "navy",
 };
 
 // 프로그램 하나의 상태를 여러 신호(program_status, 정원, 내 신청/출석 여부)로부터 계산한다.
@@ -46,8 +48,11 @@ export function computeCardStatus(
     }
   }
 
-  if (program.program_status === "closed" || program.program_status === "in_progress") {
+  if (program.program_status === "closed") {
     return totalCapacity !== null && totalRegistrations >= totalCapacity ? "full" : "closed";
+  }
+  if (program.program_status === "in_progress") {
+    return "in_progress";
   }
 
   // recruiting

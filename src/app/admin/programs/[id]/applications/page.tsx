@@ -143,6 +143,30 @@ export default function ApplicationsPage() {
     setSelectedIds(next);
   };
 
+  const bulkMarkAttendance = async (checkedIn: boolean) => {
+    if (!selectedIds.size || !program) return;
+    const targetRows = rows.filter((r) => selectedIds.has(r.registration.id) && r.sessionIds.length > 0);
+    if (!targetRows.length) {
+      setError("선택한 신청자 중 등록된 회차가 없어요. 회차를 먼저 신청해야 출석 처리할 수 있어요.");
+      return;
+    }
+    try {
+      await Promise.all(
+        targetRows.flatMap((r) =>
+          r.sessionIds.map((sessionId) =>
+            checkedIn
+              ? api("/api/admin/mark-attendance", { method: "POST", body: JSON.stringify({ participantId: r.participant.id, programId: program.id, sessionId }) })
+              : api("/api/admin/mark-attendance", { method: "DELETE", body: JSON.stringify({ participantId: r.participant.id, sessionId }) })
+          )
+        )
+      );
+      setSelectedIds(new Set());
+      load();
+    } catch (e: any) {
+      setError(e.message ?? "출석 처리 중 문제가 발생했습니다.");
+    }
+  };
+
   const bulkUpdate = async (status: ApplicationStatus) => {
     if (!selectedIds.size) return;
     try {
@@ -261,6 +285,12 @@ export default function ApplicationsPage() {
         <button onClick={() => bulkUpdate("cancelled")} disabled={!selectedIds.size} className="text-xs font-medium px-3 py-2 rounded-lg border border-line text-muted disabled:opacity-30">
           취소 처리
         </button>
+        <button onClick={() => bulkMarkAttendance(true)} disabled={!selectedIds.size} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg bg-navy text-white disabled:opacity-30">
+          <Check size={13} /> 출석 체크
+        </button>
+        <button onClick={() => bulkMarkAttendance(false)} disabled={!selectedIds.size} className="text-xs font-medium px-3 py-2 rounded-lg border border-line text-muted disabled:opacity-30">
+          출석 취소
+        </button>
         <button onClick={downloadCsv} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg border border-line text-navy ml-auto">
           <Download size={13} /> 신청자 CSV
         </button>
@@ -268,6 +298,9 @@ export default function ApplicationsPage() {
           <Download size={13} /> 출석기록 CSV
         </button>
       </div>
+      <p className="text-[11px] text-muted -mt-2 mb-3 px-1">
+        출석 체크/취소는 선택한 신청자가 신청한 모든 회차에 한 번에 적용돼요.
+      </p>
 
       {viewMode === "table" && (
       <div className="rounded-xl border border-line overflow-hidden bg-white">
