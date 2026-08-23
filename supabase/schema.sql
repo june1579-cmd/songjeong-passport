@@ -767,3 +767,17 @@ language sql security definer set search_path = public as $$
   limit 1;
 $$;
 grant execute on function rpc_get_my_participant(uuid) to anon;
+
+-- =================================================================
+-- 확장 24: QR 토큰의 URL 안전성 문제 수정 (체크인 안 되던 진짜 원인)
+-- =================================================================
+-- base64 인코딩은 '/', '+', '=' 같은 URL에서 문제되는 문자를 만들어낼 수 있었다.
+-- (예: qr_token에 '/'가 섞이면 /checkin/토큰 URL의 경로가 깨져서 체크인 페이지가 안 열림)
+-- 앞으로 생성되는 토큰은 hex(0-9, a-f)로만 만들어 URL 문제를 원천 차단한다.
+alter table sessions alter column qr_token set default encode(gen_random_bytes(12), 'hex');
+
+-- 이미 만들어진 회차 중, 문제되는 문자가 섞인 토큰만 안전한 값으로 재발급
+-- (문제 없는 기존 토큰은 그대로 유지되어, 이미 인쇄된 QR은 계속 유효함)
+update sessions
+set qr_token = encode(gen_random_bytes(12), 'hex')
+where qr_token ~ '[/+=]';

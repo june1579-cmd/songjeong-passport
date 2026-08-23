@@ -106,6 +106,20 @@ export default function ApplicationsPage() {
       setError(e.message ?? "처리 중 문제가 발생했습니다.");
     }
   };
+
+  // QR 스캔 없이 관리자가 직접 출석을 기록하거나 취소
+  const toggleAttendance = async (participantId: string, programId: string, sessionId: string, currentlyCheckedIn: boolean) => {
+    try {
+      if (currentlyCheckedIn) {
+        await api("/api/admin/mark-attendance", { method: "DELETE", body: JSON.stringify({ participantId, sessionId }) });
+      } else {
+        await api("/api/admin/mark-attendance", { method: "POST", body: JSON.stringify({ participantId, programId, sessionId }) });
+      }
+      load();
+    } catch (e: any) {
+      setError(e.message ?? "출석 처리 중 문제가 발생했습니다.");
+    }
+  };
   const today = new Date().toISOString().slice(0, 10);
 
 
@@ -348,6 +362,7 @@ export default function ApplicationsPage() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-sm font-medium text-ink">{r.participant.name}</span>
                           <span className="text-[11px] text-muted">{r.participant.age_group}</span>
+                          {checkedIn && <span className="text-[10px] text-seafoam font-medium">✓ 출석</span>}
                           {r.participant.is_blacklisted && <Pill tone="coral">참여제한</Pill>}
                           {!r.participant.is_blacklisted && r.participant.no_show_count > 0 && (
                             <span className="text-[10px] text-coralDark">노쇼 {r.participant.no_show_count}회</span>
@@ -359,6 +374,14 @@ export default function ApplicationsPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {r.registration.status === "selected" && (
+                          <button
+                            onClick={() => toggleAttendance(r.participant.id, program!.id, session.id, checkedIn)}
+                            className={`text-[11px] font-medium px-2 py-1.5 rounded-lg border ${checkedIn ? "border-seafoam text-seafoam bg-seafoamLight" : "border-line text-navy"}`}
+                          >
+                            {checkedIn ? "출석 취소" : "출석 체크"}
+                          </button>
+                        )}
                         <button
                           onClick={() => toggleBlacklist(r.participant.id, r.participant.is_blacklisted)}
                           className={`text-[11px] font-medium px-2 py-1.5 rounded-lg border ${r.participant.is_blacklisted ? "border-seafoam text-seafoam" : "border-coralDark text-coralDark"}`}
