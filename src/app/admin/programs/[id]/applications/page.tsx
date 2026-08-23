@@ -41,6 +41,7 @@ export default function ApplicationsPage() {
   const [program, setProgram] = useState<Program | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSessionId, setBulkSessionId] = useState("");
   const [filter, setFilter] = useState<"all" | ApplicationStatus>("all");
   const [viewMode, setViewMode] = useState<"table" | "session">("table");
   const [notifications, setNotifications] = useState<(Notification & { participant_name: string })[]>([]);
@@ -145,21 +146,25 @@ export default function ApplicationsPage() {
 
   const bulkMarkAttendance = async (checkedIn: boolean) => {
     if (!selectedIds.size || !program) return;
-    const targetRows = rows.filter((r) => selectedIds.has(r.registration.id) && r.sessionIds.length > 0);
+    if (!bulkSessionId) {
+      setError("먼저 출석 처리할 참여 날짜(회차)를 선택해주세요.");
+      return;
+    }
+    const targetRows = rows.filter((r) => selectedIds.has(r.registration.id) && r.sessionIds.includes(bulkSessionId));
+    const skipped = selectedIds.size - targetRows.length;
     if (!targetRows.length) {
-      setError("선택한 신청자 중 등록된 회차가 없어요. 회차를 먼저 신청해야 출석 처리할 수 있어요.");
+      setError("선택한 신청자 중 이 회차를 신청한 사람이 없어요.");
       return;
     }
     try {
       await Promise.all(
-        targetRows.flatMap((r) =>
-          r.sessionIds.map((sessionId) =>
-            checkedIn
-              ? api("/api/admin/mark-attendance", { method: "POST", body: JSON.stringify({ participantId: r.participant.id, programId: program.id, sessionId }) })
-              : api("/api/admin/mark-attendance", { method: "DELETE", body: JSON.stringify({ participantId: r.participant.id, sessionId }) })
-          )
+        targetRows.map((r) =>
+          checkedIn
+            ? api("/api/admin/mark-attendance", { method: "POST", body: JSON.stringify({ participantId: r.participant.id, programId: program.id, sessionId: bulkSessionId }) })
+            : api("/api/admin/mark-attendance", { method: "DELETE", body: JSON.stringify({ participantId: r.participant.id, sessionId: bulkSessionId }) })
         )
       );
+      if (skipped > 0) setError(`${skipped}명은 이 회차를 신청하지 않아 건너뛰었어요.`);
       setSelectedIds(new Set());
       load();
     } catch (e: any) {
@@ -285,10 +290,25 @@ export default function ApplicationsPage() {
         <button onClick={() => bulkUpdate("cancelled")} disabled={!selectedIds.size} className="text-xs font-medium px-3 py-2 rounded-lg border border-line text-muted disabled:opacity-30">
           취소 처리
         </button>
-        <button onClick={() => bulkMarkAttendance(true)} disabled={!selectedIds.size} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg bg-navy text-white disabled:opacity-30">
+        {sessionsData.length > 0 && (
+          <select
+            value={bulkSessionId}
+            onChange={(e) => setBulkSessionId(e.target.value)}
+            className="text-xs border border-line rounded-lg px-2 py-2 bg-white text-ink"
+          >
+            <option value="">출석 처리할 날짜 선택</option>
+            {sessionsData
+              .slice()
+              .sort((a, b) => a.session_date.localeCompare(b.session_date))
+              .map((s) => (
+                <option key={s.id} value={s.id}>{s.session_label} · {s.session_date}</option>
+              ))}
+          </select>
+        )}
+        <button onClick={() => bulkMarkAttendance(true)} disabled={!selectedIds.size || !bulkSessionId} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg bg-navy text-white disabled:opacity-30">
           <Check size={13} /> 출석 체크
         </button>
-        <button onClick={() => bulkMarkAttendance(false)} disabled={!selectedIds.size} className="text-xs font-medium px-3 py-2 rounded-lg border border-line text-muted disabled:opacity-30">
+        <button onClick={() => bulkMarkAttendance(false)} disabled={!selectedIds.size || !bulkSessionId} className="text-xs font-medium px-3 py-2 rounded-lg border border-line text-muted disabled:opacity-30">
           출석 취소
         </button>
         <button onClick={downloadCsv} className="flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-lg border border-line text-navy ml-auto">
@@ -299,7 +319,7 @@ export default function ApplicationsPage() {
         </button>
       </div>
       <p className="text-[11px] text-muted -mt-2 mb-3 px-1">
-        출석 체크/취소는 선택한 신청자가 신청한 모든 회차에 한 번에 적용돼요.
+        날짜(회차)를 먼저 선택한 뒤 출석 체크/취소하면, 그 회차를 신청한 선택 인원에게만 적용돼요.
       </p>
 
       {viewMode === "table" && (
