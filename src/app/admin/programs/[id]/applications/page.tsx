@@ -10,6 +10,7 @@ interface Row {
   registration: Registration;
   participant: Participant;
   priorVisits: number;
+  thisProgramAttendance: number;
   sessionLabels: string;
   sessionIds: string[];
 }
@@ -71,7 +72,8 @@ export default function ApplicationsPage() {
           if (!participant) return null;
           const labels = labelsByRegistration[r.id];
           const sessionLabels = labels?.length ? labels.join(", ") : "-";
-          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0, sessionLabels, sessionIds: sessionIdsByRegistration[r.id] ?? [] };
+          const thisProgramAttendance = (attendance ?? []).filter((a: { participant_id: string }) => a.participant_id === r.participant_id).length;
+          return { registration: r, participant, priorVisits: priorVisitsMap?.[r.participant_id] ?? 0, thisProgramAttendance, sessionLabels, sessionIds: sessionIdsByRegistration[r.id] ?? [] };
         })
         .filter(Boolean) as Row[];
       setRows(list);
@@ -194,7 +196,7 @@ export default function ApplicationsPage() {
   };
 
   const downloadCsv = () => {
-    const header = ["이름", "전화번호", "연령대", "거주지역", "보호자", "유입경로", "신청일", "기존참여횟수", "신청 회차", "상태"];
+    const header = ["이름", "전화번호", "연령대", "거주지역", "보호자", "유입경로", "신청일", "참여 프로그램 수", "이 프로그램 출석", "신청 회차", "상태"];
     const lines = rows.map((r) => [
       r.participant.name,
       r.participant.phone_number ?? `****-****-${r.participant.phone4}`,
@@ -204,6 +206,7 @@ export default function ApplicationsPage() {
       r.registration.acquisition_channel,
       new Date(r.registration.registered_at).toLocaleDateString("ko-KR"),
       String(r.priorVisits),
+      String(r.thisProgramAttendance),
       r.sessionLabels,
       APPLICATION_STATUS_LABEL[r.registration.status],
     ]);
@@ -334,6 +337,7 @@ export default function ApplicationsPage() {
               <col style={{ width: 128 }} />
               <col style={{ width: 100 }} />
               <col style={{ width: 68 }} />
+              <col style={{ width: 78 }} />
             </colgroup>
             <thead>
               <tr className="bg-sand text-navy sticky top-0 z-10">
@@ -345,7 +349,8 @@ export default function ApplicationsPage() {
                 <th className="text-left p-2.5 font-semibold tracking-tight">연령대</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">거주지역</th>
                 <th className="text-left p-2.5 font-semibold tracking-tight">유입경로</th>
-                <th className="text-right p-2.5 font-semibold tracking-tight">기존참여</th>
+                <th className="text-right p-2.5 font-semibold tracking-tight">참여 프로그램 수</th>
+                <th className="text-right p-2.5 font-semibold tracking-tight">이 프로그램 출석</th>
               </tr>
             </thead>
             <tbody>
@@ -388,6 +393,9 @@ export default function ApplicationsPage() {
                     {r.registration.acquisition_channel}
                   </td>
                   <td className="p-2.5 align-middle text-right text-ink" style={{ fontVariantNumeric: "tabular-nums" }}>{r.priorVisits}</td>
+                  <td className="p-2.5 align-middle text-right font-medium" style={{ fontVariantNumeric: "tabular-nums", color: r.thisProgramAttendance > 0 ? "#4E9C82" : undefined }}>
+                    {r.thisProgramAttendance}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -416,6 +424,7 @@ export default function ApplicationsPage() {
                           <span className="text-sm font-medium text-ink">{r.participant.name}</span>
                           <span className="text-[11px] text-muted">{r.participant.age_group}</span>
                           {checkedIn && <span className="text-[10px] text-seafoam font-medium">✓ 출석</span>}
+                          {r.thisProgramAttendance > 0 && <span className="text-[10px] text-muted">이 프로그램 총 {r.thisProgramAttendance}회</span>}
                           {r.participant.is_blacklisted && <Pill tone="coral">참여제한</Pill>}
                           {!r.participant.is_blacklisted && r.participant.no_show_count > 0 && (
                             <span className="text-[10px] text-coralDark">노쇼 {r.participant.no_show_count}회</span>
