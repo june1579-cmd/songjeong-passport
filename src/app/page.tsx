@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Megaphone, Pin, Images } from "lucide-react";
+import { Megaphone, Pin, Images, Star } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getStoredParticipantId } from "@/lib/participant-session";
-import { Program, Session, Registration, Attendance, Participant, Announcement, Photo, PROGRAM_CATEGORIES } from "@/lib/types";
+import { Program, Session, Registration, Attendance, Participant, Announcement, Photo, Review, PROGRAM_CATEGORIES } from "@/lib/types";
 import { computeCardStatus, nextUpcomingSession } from "@/lib/program-status";
 import { categoryColor } from "@/lib/category-colors";
 import ProgramCard from "@/components/ProgramCard";
@@ -15,6 +15,7 @@ import PhotoSlideshow from "@/components/PhotoSlideshow";
 import AnnouncementModal from "@/components/AnnouncementModal";
 import AmbientWaveSound from "@/components/AmbientWaveSound";
 import PassportMark from "@/components/PassportMark";
+import Lightbox from "@/components/Lightbox";
 
 function dateLabelFor(sessions: Session[], programId: string) {
   const list = sessions.filter((s) => s.program_id === programId).map((s) => s.session_date).sort();
@@ -34,6 +35,8 @@ export default function HomePage() {
   const [myAttendance, setMyAttendance] = useState<Attendance[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [slidePhotos, setSlidePhotos] = useState<Photo[]>([]);
+  const [recentReviews, setRecentReviews] = useState<Review[]>([]);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [openAnnouncement, setOpenAnnouncement] = useState<Announcement | null>(null);
   const [filter, setFilter] = useState("전체");
 
@@ -59,6 +62,10 @@ export default function HomePage() {
       // 진행 중인 프로그램들의 사진을 모아 슬라이드로 (최신순 최대 8장)
       const { data: photos } = await supabase.from("photos").select("*").not("program_id", "is", null).order("created_at", { ascending: false }).limit(8);
       setSlidePhotos(photos ?? []);
+
+      // 프로그램 전체에서 최근 후기를 모아서 홈에 보여준다
+      const { data: reviews } = await supabase.from("reviews").select("*").order("created_at", { ascending: false }).limit(6);
+      setRecentReviews(reviews ?? []);
 
       const pid = getStoredParticipantId();
       if (pid) {
@@ -189,6 +196,41 @@ export default function HomePage() {
         </div>
       )}
 
+      {recentReviews.length > 0 && (
+        <div className="px-4 mt-5">
+          <div className="flex items-center gap-1.5 mb-2 px-1">
+            <Star size={13} className="text-navy" />
+            <span className="text-xs font-semibold text-navy tracking-tight">참여자 후기</span>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {recentReviews.map((r) => {
+              const prog = r.program_id ? programMap[r.program_id] : undefined;
+              return (
+                <div key={r.id} className="flex-shrink-0 w-60 rounded-xl border border-line bg-white p-3">
+                  {prog && (
+                    <Link href={`/programs/${prog.id}`} className="text-[10px] text-muted mb-1 block truncate">
+                      {prog.emoji} {prog.title}
+                    </Link>
+                  )}
+                  <div className="flex items-center gap-0.5 mb-1.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} size={11} fill={n <= (r.rating ?? 0) ? "#E8734A" : "none"} color={n <= (r.rating ?? 0) ? "#E8734A" : "#E3DCC9"} />
+                    ))}
+                  </div>
+                  {r.content && <p className="text-xs text-ink leading-relaxed line-clamp-3">{r.content}</p>}
+                  {r.image_url && (
+                    <button onClick={() => setLightboxSrc(r.image_url)} className="block w-full mt-2">
+                      <img src={r.image_url} alt="" className="w-full h-24 object-cover rounded-lg border border-line" />
+                    </button>
+                  )}
+                  <p className="text-[10px] text-muted mt-2">{r.author_name}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 필터 칩 */}
       <div className="mt-5 px-4">
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -244,6 +286,7 @@ export default function HomePage() {
       </div>
 
       {openAnnouncement && <AnnouncementModal announcement={openAnnouncement} onClose={() => setOpenAnnouncement(null)} />}
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
       <AmbientWaveSound />
       <BottomNav />
