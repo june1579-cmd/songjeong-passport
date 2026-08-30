@@ -17,6 +17,13 @@ import AmbientWaveSound from "@/components/AmbientWaveSound";
 import PassportMark from "@/components/PassportMark";
 import Lightbox from "@/components/Lightbox";
 
+// 홈 화면 후기에 표시할 이름 — 성만 공개하고 나머지는 * 처리 (예: 김주민 → 김**)
+function maskName(name: string): string {
+  if (!name) return "익명";
+  if (name.length <= 1) return name;
+  return name[0] + "*".repeat(name.length - 1);
+}
+
 function dateLabelFor(sessions: Session[], programId: string) {
   const list = sessions.filter((s) => s.program_id === programId).map((s) => s.session_date).sort();
   if (!list.length) return "";
@@ -217,13 +224,17 @@ export default function HomePage() {
                       <Star key={n} size={11} fill={n <= (r.rating ?? 0) ? "#E8734A" : "none"} color={n <= (r.rating ?? 0) ? "#E8734A" : "#E3DCC9"} />
                     ))}
                   </div>
-                  {r.content && <p className="text-xs text-ink leading-relaxed line-clamp-3">{r.content}</p>}
+                  {r.content && (
+                    <p className="text-xs text-ink leading-relaxed">
+                      {r.content.length > 10 ? `${r.content.slice(0, 10)}...` : r.content}
+                    </p>
+                  )}
                   {r.image_url && (
                     <button onClick={() => setLightboxSrc(r.image_url)} className="block w-full mt-2">
                       <img src={r.image_url} alt="" className="w-full h-24 object-cover rounded-lg border border-line" />
                     </button>
                   )}
-                  <p className="text-[10px] text-muted mt-2">{r.author_name}</p>
+                  <p className="text-[10px] text-muted mt-2">{maskName(r.author_name)}</p>
                 </div>
               );
             })}

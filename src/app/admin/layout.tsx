@@ -9,6 +9,7 @@ const NAV = [
   { href: "/admin/participants", label: "참여자 관리" },
   { href: "/admin/announcements", label: "공지사항" },
   { href: "/admin/photos", label: "사진 갤러리" },
+  { href: "/admin/reviews", label: "후기 관리" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
